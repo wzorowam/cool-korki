@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cool Korki — Discovery Adventure</title>
+  <meta name="description" content="Cool Korki: immersive English learning adventure with AI, neuroscience, and zero salesy vibes." />
+  <meta name="theme-color" content="#0c0a1a" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='10' fill='%234f46e5'/><text x='16' y='21' text-anchor='middle' font-size='11' font-family='system-ui' font-weight='800' fill='white'>CK</text></svg>" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.170.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body data-scene="start" data-progress="0" data-webgl="pending">
+  <!-- 3D WORLD LAYER (fixed behind content) -->
+  <div class="world" id="world" aria-hidden="true">
+    <!-- Real WebGL lab room -->
+    <canvas id="lab3d" class="lab3d-canvas"></canvas>
+    <!-- CSS fallback world (shown if WebGL fails / reduced motion) -->
+    <div class="world-fallback" id="world-fallback">
+      <canvas id="starfield"></canvas>
+      <div class="world-vignette"></div>
+      <div class="world-fog"></div>
+      <div class="depth-stage" id="depth-stage">
+        <div class="depth-layer l-far" data-depth="0.08">
+          <span class="orb o1"></span>
+          <span class="orb o2"></span>
+        </div>
+        <div class="depth-layer l-mid" data-depth="0.22">
+          <span class="ring r1"></span>
+          <span class="ring r2"></span>
+          <span class="shard s1"></span>
+          <span class="shard s2"></span>
+          <span class="shard s3"></span>
+        </div>
+        <div class="depth-layer l-near" data-depth="0.45">
+          <span class="float-card fc1">🎙️</span>
+          <span class="float-card fc2">🧠</span>
+          <span class="float-card fc3">🚀</span>
+          <span class="float-card fc4">✨</span>
+        </div>
+      </div>
+    </div>
+    <div class="world-vignette world-vignette-top"></div>
+  </div>
+
+  <!-- TOP SCROLL PROGRESS -->
+  <div class="xp-bar" aria-hidden="true">
+    <div class="xp-fill" id="xp-fill"></div>
+  </div>
+
+  <!-- JOURNEY MAP (desktop) -->
+  <nav class="journey-rail" id="journey-rail" aria-label="Adventure map">
+    <div class="rail-track">
+      <div class="rail-fill" id="rail-fill"></div>
+      <div class="rail-guide" id="rail-guide">
+        <img src="assets/korki-character.jpg" alt="" />
+      </div>
+    </div>
+    <ul class="rail-stops">
+      <li><button type="button" data-goto="start" class="rail-stop is-active" title="Start"><span>00</span> Start</button></li>
+      <li><button type="button" data-goto="story" class="rail-stop" title="Setup"><span>01</span> Setup</button></li>
+      <li><button type="button" data-goto="why" class="rail-stop" title="Why"><span>02</span> Why</button></li>
+      <li><button type="button" data-goto="adventures" class="rail-stop" title="Quests"><span>03</span> Quests</button></li>
+      <li><button type="button" data-goto="lab" class="rail-stop" title="Lab"><span>04</span> Lab</button></li>
+      <li><button type="button" data-goto="paths" class="rail-stop" title="Paths"><span>05</span> Paths</button></li>
+      <li><button type="button" data-goto="hello" class="rail-stop" title="Hello"><span>06</span> Hello</button></li>
+    </ul>
+  </nav>
+
+  <header class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="#start" class="logo" aria-label="Cool Korki home">
+        <span class="logo-mark">CK</span>
+        Cool Korki
+      </a>
+      <ul class="nav-links">
+        <li><a href="#story">Historia</a></li>
+        <li><a href="#why">Dlaczego</a></li>
+        <li><a href="#adventures">Quests</a></li>
+        <li><a href="#lab">Lab</a></li>
+        <li><a href="#paths">Ścieżki</a></li>
+      </ul>
+      <a href="#hello" class="btn btn-primary nav-cta">Hej, pogadajmy</a>
+      <button class="menu-btn" id="menu-btn" type="button" aria-label="Otwórz menu" aria-expanded="false">
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <div class="mobile-menu" id="mobile-menu" hidden>
+    <a href="#story">Historia</a>
+    <a href="#why">Dlaczego</a>
+    <a href="#adventures">Quests</a>
+    <a href="#lab">Lab</a>
+    <a href="#paths">Ścieżki</a>
+    <a href="#hello" class="btn btn-primary">Hej, pogadajmy</a>
+  </div>
+
+  <!-- CHAPTER HUD + SOUND -->
+  <div class="chapter-hud" id="chapter-hud" aria-live="polite">
+    <span class="chapter-num" id="chapter-num">00</span>
+    <span class="chapter-name" id="chapter-name">Gateway</span>
+  </div>
+
+  <div class="exp-controls">
+    <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" title="Sound on/off">
+      <span class="sound-icon" aria-hidden="true">🔇</span>
+      <span class="sound-label">Sound off</span>
+    </button>
+  </div>
+
+  <main id="top">
+    <!-- SCENE 0 · GATEWAY (pinned cinematic) -->
+    <section class="pin-scene" id="start" data-scene="start" data-chapter="00" data-title="Gateway" data-mood="dawn">
+      <div class="pin-sticky">
+        <div class="scene-stage" data-tilt>
+          <div class="hero-bg-layer" data-parallax="0.15">
+            <img src="assets/hero-bg.jpg" alt="" />
+          </div>
+          <div class="wrap hero-grid hero-immersive">
+            <div class="hero-copy" data-enter="left">
+              <div class="hero-badge">
+                <span class="dot"></span>
+                Chapter 00 · Welcome to the lab
+              </div>
+              <h1>Nie studiujemy angielskiego.<br /><em>Gramy nim.</em></h1>
+              <p class="hero-sub">
+                Jestem <strong>Cool Korki</strong> — Twój AI buddy, coach i certified chaos manager.
+                To nie landing page. To <strong>discovery adventure</strong>.
+                Scroll = teleporter.
+              </p>
+              <div class="hero-actions">
+                <a href="#story" class="btn btn-primary btn-lg">Wejdź do story</a>
+                <a href="#adventures" class="btn btn-secondary btn-lg">Skip to quests</a>
+              </div>
+              <div class="hero-note">
+                <img src="assets/korki-character.jpg" alt="Cool Korki" />
+                <p>
+                  <strong>C00l K0RKI 🤖</strong>
+                  Scroll wolno. Każdy rozdział odblokowuje nowy depth layer.
+                </p>
+              </div>
+            </div>
+            <div class="hero-visual" data-enter="right">
+              <!-- Hello video portal -->
+              <div class="video-portal" id="video-portal" data-parallax="0.28">
+                <div class="portal-ring portal-ring-outer" aria-hidden="true"></div>
+                <div class="portal-ring portal-ring-mid" aria-hidden="true"></div>
+                <div class="portal-frame">
+                  <video
+                    id="portal-video"
+                    class="portal-video"
+                    src="assets/hello-portal.mp4"
+                    poster="assets/korki-character.jpg"
+                    muted
+                    playsinline
+                    loop
+                    preload="metadata"
+                  ></video>
+                  <img
+                    class="portal-poster"
+                    id="portal-poster"
+                    src="assets/korki-character.jpg"
+                    alt="Cool Korki"
+                    width="480"
+                    height="480"
+                  />
+                  <div class="portal-shine" aria-hidden="true"></div>
+                </div>
+                <button type="button" class="portal-play" id="portal-play" aria-label="Open hello portal">
+                  <span class="portal-play-icon">▶</span>
+                  <span class="portal-play-text">Hello portal</span>
+                </button>
+                <div class="char-ring portal-spin" aria-hidden="true"></div>
+              </div>
+            </div>
+          </div>
+          <div class="scroll-cue" aria-hidden="true">
+            <div class="scroll-orb"></div>
+            <span>scroll to enter · or open portal</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCENE 1 · SETUP -->
+    <section class="pin-scene" id="story" data-scene="story" data-chapter="01" data-title="Setup" data-mood="school">
+      <div class="pin-sticky">
+        <div class="scene-stage scene-dim" data-tilt>
+          <div class="wrap scene-content">
+            <p class="section-label" data-enter="up">Rozdział 1 · Setup</p>
+            <h2 data-enter="up">Szkolny angielski Cię nie zawiódł.<br /><span class="em">Po prostu nie był cool.</span></h2>
+            <p class="lead" data-enter="up">
+              Coursebook. „My name is…”. Strach przed błędem. Zero real talk.
+              Cool Korki flipuje to: adventure, nie lekcja.
+            </p>
+            <div class="story-grid depth-grid">
+              <article class="story-card depth-card" data-z="1" data-enter="up">
+                <div class="num">01 · Problem</div>
+                <h3>Bariera mówienia ≠ braki w słowniku</h3>
+                <p>To <strong>podejście</strong>. Przełamujemy je grą, projektem i realną rozmową — nie testem.</p>
+              </article>
+              <article class="story-card depth-card" data-z="2" data-enter="up">
+                <div class="num">02 · Twist</div>
+                <h3>AI jako multiplier, nie zamiennik</h3>
+                <p>Godziny mówienia między sesjami. Lektor zostaje. Superpower rośnie.</p>
+              </article>
+              <article class="story-card depth-card" data-z="3" data-enter="up">
+                <div class="num">03 · Feel</div>
+                <h3>Fun · curiosity · trust</h3>
+                <p>Zero salesy. Neuronauka, pasje, projekty, storytelling. <strong>Cool experience.</strong></p>
+              </article>
+              <article class="story-card depth-card" data-z="4" data-enter="up">
+                <div class="num">04 · Promise</div>
+                <h3>Najfajniejsze zajęcia w Twoim życiu</h3>
+                <p>10–45 min. Hybrid. Mixers. Secret project — real or imaginary.</p>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCENE 2 · WHY (stacked 3 reasons as scroll stages inside pin) -->
+    <section class="pin-scene pin-long" id="why" data-scene="why" data-chapter="02" data-title="3 Whys" data-mood="insight">
+      <div class="pin-sticky">
+        <div class="scene-stage" data-tilt>
+          <div class="wrap scene-content why-immersive">
+            <p class="section-label" data-enter="up">Rozdział 2 · How is this different</p>
+            <h2 data-enter="up">Trzy powody, dla których <span class="em-orange">to nie jest kurs.</span></h2>
+            <div class="why-stack" id="why-stack">
+              <article class="why-panel" data-step="0">
+                <div class="why-big">01</div>
+                <div class="icon">🧠</div>
+                <h3>Bo mózg lubi fun</h3>
+                <p>Neuronauka + habit design. Uczysz się, jak się uczyć — żeby lubić naukę. Error = learning.</p>
+              </article>
+              <article class="why-panel" data-step="1">
+                <div class="why-big">02</div>
+                <div class="icon">🚀</div>
+                <h3>Bo mówisz o cool shit</h3>
+                <p>Biznes, AI, branding, story, projekty. Nie weather small talk. Tematy na jutro.</p>
+              </article>
+              <article class="why-panel" data-step="2">
+                <div class="why-big">03</div>
+                <div class="icon">🎮</div>
+                <h3>Bo to adventure, nie lekcja</h3>
+                <p>Journeys. Do 3 adventures. 1:1, hybrid, mixers. 100% custom — albo gotowa ścieżka.</p>
+              </article>
+            </div>
+            <div class="why-dots" aria-hidden="true">
+              <span data-dot="0" class="is-on"></span>
+              <span data-dot="1"></span>
+              <span data-dot="2"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCENE 3 · QUESTS (horizontal-ish depth carousel driven by scroll) -->
+    <section class="pin-scene pin-long" id="adventures" data-scene="adventures" data-chapter="03" data-title="Quests" data-mood="quest">
+      <div class="pin-sticky">
+        <div class="scene-stage" data-tilt>
+          <div class="wrap scene-content">
+            <p class="section-label" data-enter="up">Rozdział 3 · Adventures</p>
+            <h2 data-enter="up">Wybierz quest.<br /><span class="em">Reszta to gameplay.</span></h2>
+            <p class="lead" data-enter="up">Scroll w tej strefie = pan po questach w 3D space.</p>
+          </div>
+          <div class="quest-tunnel" id="quest-tunnel">
+            <div class="quest-track" id="quest-track">
+              <article class="quest-card" data-quest="0">
+                <span class="adventure-icon">🎙️</span>
+                <span class="adventure-tag">speaking</span>
+                <h3>Speak Like a Boss</h3>
+                <p>Meetingi, leadership language, owning the room.</p>
+              </article>
+              <article class="quest-card" data-quest="1">
+                <span class="adventure-icon">🧪</span>
+                <span class="adventure-tag">meta-skill</span>
+                <h3>The Learning Lab</h3>
+                <p>GPT, NotebookLM, brain hacks, Twój system nauki.</p>
+              </article>
+              <article class="quest-card" data-quest="2">
+                <span class="adventure-icon">✨</span>
+                <span class="adventure-tag">passion</span>
+                <h3>Follow the Fun</h3>
+                <p>Hobby = homework. Mini projekty wokół tego, co kochasz.</p>
+              </article>
+              <article class="quest-card" data-quest="3">
+                <span class="adventure-icon">📖</span>
+                <span class="adventure-tag">story</span>
+                <h3>Let Me Tell You a Story</h3>
+                <p>Storytelling + AI avatars. Future-yourself speaking.</p>
+              </article>
+              <article class="quest-card" data-quest="4">
+                <span class="adventure-icon">💡</span>
+                <span class="adventure-tag">build</span>
+                <h3>Secret Project</h3>
+                <p>Budujemy biznes na lekcjach. Real or imaginary.</p>
+              </article>
+              <article class="quest-card" data-quest="5">
+                <span class="adventure-icon">🤖</span>
+                <span class="adventure-tag">AI</span>
+                <h3>AI Sidekick</h3>
+                <p>Własny agent / chatbot — i angielski po drodze.</p>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCENE 4 · LAB -->
+    <section class="pin-scene" id="lab" data-scene="lab" data-chapter="04" data-title="The Lab" data-mood="lab">
+      <div class="pin-sticky">
+        <div class="scene-stage" data-tilt>
+          <div class="wrap scene-content">
+            <p class="section-label" data-enter="up">Rozdział 4 · The Lab</p>
+            <h2 data-enter="up">Nowoczesne narzędzia.<br /><span class="em">Bez tech-bro monologu.</span></h2>
+            <p class="lead" data-enter="up">
+              ChatGPT, NotebookLM, Gemini, voice — zostają z Tobą nie tylko do angielskiego.
+            </p>
+            <div class="tools-orbit" id="tools-orbit">
+              <div class="orbit-core">
+                <img src="assets/korki-character.jpg" alt="" />
+                <span>LAB</span>
+              </div>
+              <div class="tool-pill orbit-item" style="--i:0"><span>●</span> ChatGPT voice</div>
+              <div class="tool-pill orbit-item" style="--i:1"><span>●</span> NotebookLM</div>
+              <div class="tool-pill orbit-item" style="--i:2"><span>●</span> Gemini</div>
+              <div class="tool-pill orbit-item" style="--i:3"><span>●</span> Custom bot</div>
+              <div class="tool-pill orbit-item" style="--i:4"><span>●</span> AI avatars</div>
+              <div class="tool-pill orbit-item" style="--i:5"><span>●</span> Neuro tips</div>
+            </div>
+            <blockquote class="tools-quote" data-enter="up">
+              <strong>Pro tip z labu:</strong> nie każ ChatGPT „poprawiać błędów” w trakcie rozmowy —
+              to zabija natural conversation. Najpierw gadaj. Potem analizuj powtarzalne wpadki.
+            </blockquote>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCENE 5 · PATHS (normal-ish, still in world) -->
+    <section class="flow-scene" id="paths" data-scene="paths" data-chapter="05" data-title="Paths" data-mood="path">
+      <div class="wrap scene-content">
+        <p class="section-label reveal">Rozdział 5 · Paths (nie package’e)</p>
+        <h2 class="reveal">Kilka sposobów, żeby <span class="em">zacząć.</span></h2>
+        <p class="lead offers-intro reveal">
+          Zero hard sell. Spójrz, co pasuje. Resztę dogadamy jak ludzie.
+        </p>
+        <div class="offers-grid">
+          <article class="offer featured reveal depth-card" data-z="2">
+            <div>
+              <h3>30-dniowe wyzwanie mówienia</h3>
+              <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 0.35rem">
+                Codzienny rytm. Bariera w dół.
+              </p>
+            </div>
+            <div class="offer-price"><span class="was">169 zł</span>69<small>zł</small></div>
+            <ul>
+              <li>codzienne ćwiczenia mówienia</li>
+              <li>poradnik rozmów z ChatGPT</li>
+              <li>tips z neuronauki</li>
+              <li>udostępnij post → rabat 100 zł</li>
+            </ul>
+            <a href="#hello" class="btn btn-primary">Chcę to wyzwanie</a>
+          </article>
+          <article class="offer reveal depth-card" data-z="1">
+            <div>
+              <h3>Interactive workbook</h3>
+              <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 0.35rem">Podręcznik + human feedback.</p>
+            </div>
+            <div class="offer-price">420<small>zł</small></div>
+            <ul>
+              <li>indywidualny podręcznik</li>
+              <li>2 konsultacje z lektorem</li>
+              <li>ćwiczenia utrwalające</li>
+            </ul>
+            <a href="#hello" class="btn btn-secondary">Opowiedz mi więcej</a>
+          </article>
+          <article class="offer reveal depth-card" data-z="3">
+            <div>
+              <h3>Personal chatbot + sesje</h3>
+              <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 0.35rem">Bot pod Twoje cele + checkpoints.</p>
+            </div>
+            <div class="offer-price">1&nbsp;690<small>zł</small></div>
+            <ul>
+              <li>osobisty chatbot</li>
+              <li>4 konsultacje z lektorem</li>
+              <li>zestawy z Twoich rozmów</li>
+            </ul>
+            <a href="#hello" class="btn btn-secondary">Zróbmy to razem</a>
+          </article>
+        </div>
+        <div class="biz-strip reveal">
+          <h3>Dla firm &amp; busy humans</h3>
+          <p>
+            Team English od <strong style="color: var(--text)">2&nbsp;420 zł</strong>.
+            Sesje od <strong style="color: var(--text)">250 zł / 20–25 min</strong>.
+            Secret Project, AI, branding — w angielskim, nie obok niego.
+          </p>
+          <div><a href="#hello" class="btn btn-ghost">Pogadajmy o zespole</a></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCENE 6 · HELLO -->
+    <section class="flow-scene" id="hello" data-scene="hello" data-chapter="06" data-title="Hello" data-mood="hello">
+      <div class="wrap scene-content">
+        <p class="section-label reveal">Ostatni rozdział · Hello</p>
+        <h2 class="reveal">Hej. <span class="em-orange">Napisz.</span> Zero forms of doom.</h2>
+        <p class="lead reveal">
+          Zostaw poziom, cel albo „TEST B1”. Wrócimy z czymś konkretnym — albo z żartem.
+        </p>
+        <div class="contact-box reveal">
+          <form class="contact-form" id="contact-form" novalidate>
+            <div class="field">
+              <label for="name">Imię</label>
+              <input id="name" name="name" type="text" autocomplete="name" placeholder="np. Asia" required />
+            </div>
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" autocomplete="email" placeholder="ty@mail.com" required />
+            </div>
+            <div class="field">
+              <label for="level">Twój poziom (na oko)</label>
+              <select id="level" name="level">
+                <option value="">jeszcze nie wiem</option>
+                <option value="A2">A2 — dam radę, ale stres</option>
+                <option value="B1">B1 — gadam, czasem szukam słów</option>
+                <option value="B2">B2 — fluid, chcę precision</option>
+                <option value="C1">C1+ — polish &amp; power</option>
+                <option value="team">Zespół / firma</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="message">Co Cię kręci?</label>
+              <textarea id="message" name="message" placeholder="np. bariera mówienia / secret project / business English…"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg">Wyślij sygnał do labu</button>
+            <p class="form-note">MVP form — zapis lokalny. Podłączymy mail / n8n kiedy będziesz gotów.</p>
+            <div class="form-success" id="form-success" role="status">
+              Sygnał odebrany. Cool Korki kiwa głową. Odezwiemy się.
+            </div>
+          </form>
+          <div class="contact-side">
+            <div class="contact-bubble">
+              <img src="assets/korki-character.jpg" alt="" />
+              <p>
+                <strong>Catch you soon, brain-traveler 🪩</strong>
+                Tu nie ma „musisz”. Jest „a może zamiast szkolnego angielskiego
+                obaczymy kilka fajnych sposobów na pogadanie?”
+              </p>
+            </div>
+            <div class="contact-links">
+              <a href="mailto:hello@coolkorki.com">✉ hello@coolkorki.com</a>
+              <a href="#paths">↗ wróć do ścieżek</a>
+              <a href="#adventures">🗺 lista questów</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <p>© <span id="year"></span> Cool Korki · unreasonably good learning</p>
+      <ul class="footer-links">
+        <li><a href="#story">Historia</a></li>
+        <li><a href="#adventures">Quests</a></li>
+        <li><a href="#hello">Kontakt</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <!-- Guide bubble (character tips) -->
+  <div class="korki-nav">
+    <div class="korki-tip" id="korki-tip" role="status"></div>
+    <button type="button" class="korki-btn" id="korki-btn" aria-label="Cool Korki — podpowiedź">
+      <img src="assets/korki-character.jpg" alt="" />
+    </button>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
