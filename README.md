@@ -2,6 +2,12 @@
 
 Static marketing site for **Cool Korki** — fun English learning with AI, neuroscience, and zero salesy vibes.
 
+## Live
+
+**https://cool-korki.vercel.app**
+
+Dashboard: https://vercel.com/wzorowams-projects/cool-korki
+
 Built from brand notes in Notion:
 
 - Minimal, funny, concise, cool
@@ -50,7 +56,7 @@ cool-korki/
 ## Next steps (when you want)
 
 - Wire contact form to email / n8n / Notion
-- Swap portal video for a real "hello" recording
+- Swap portal video for a real “hello” recording
 - PL/EN toggle
 - Deploy to Vercel
 - Optional: full WebGL room (heavier path)
