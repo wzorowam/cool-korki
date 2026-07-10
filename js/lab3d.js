@@ -623,19 +623,23 @@ function populateDenseProps(room, mats) {
       new THREE.MeshStandardMaterial({
         color: 0x1c1838,
         emissive: i % 2 ? 0x2dd4bf : 0xff6b2c,
-        emissiveIntensity: 0.35,
+        emissiveIntensity: 0.45,
         transparent: true,
-        opacity: 0.75,
+        opacity: 0.8,
         metalness: 0.4,
         roughness: 0.3,
       })
     );
+    const baseY = 1.2 + Math.random() * 2;
     cube.position.set(
       (Math.random() - 0.5) * 10,
-      1.2 + Math.random() * 2,
+      baseY,
       4 - Math.random() * 62
     );
     cube.rotation.set(Math.random(), Math.random(), Math.random());
+    cube.userData.baseY = baseY;
+    cube.userData.phase = Math.random() * Math.PI * 2;
+    cube.userData.speed = 0.6 + Math.random() * 0.8;
     props.add(cube);
     floaters.push(cube);
   }
@@ -688,35 +692,60 @@ function populateDenseProps(room, mats) {
 /**
  * @param {{ canvas: HTMLCanvasElement, reduced?: boolean }} opts
  */
+function supportsWebGL() {
+  try {
+    // IMPORTANT: never call getContext on the display canvas before Three.js —
+    // that can "steal" the context and freeze the scene.
+    const c = document.createElement("canvas");
+    return !!(c.getContext("webgl2") || c.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
+
 export async function initLab3D(opts) {
   const canvas = opts.canvas;
   const reduced = !!opts.reduced;
 
   if (!canvas) return null;
+  if (!supportsWebGL()) return null;
 
-  // WebGL check
-  const test = canvas.getContext("webgl2") || canvas.getContext("webgl");
-  if (!test) return null;
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: !reduced,
+      alpha: true,
+      powerPreference: "high-performance",
+      failIfMajorPerformanceCaveat: false,
+    });
+  } catch (err) {
+    console.warn("WebGLRenderer failed", err);
+    return null;
+  }
 
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: !reduced,
-    alpha: true,
-    powerPreference: "high-performance",
-  });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, reduced ? 1.25 : 2));
-  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  const sizeCanvas = () => {
+    const w = Math.max(1, window.innerWidth || canvas.clientWidth || 1);
+    const h = Math.max(1, window.innerHeight || canvas.clientHeight || 1);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, reduced ? 1.25 : 2));
+    renderer.setSize(w, h, false);
+    return { w, h };
+  };
+
+  const { w: startW, h: startH } = sizeCanvas();
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.12;
   renderer.setClearColor(0x0c0a1a, 0);
+  // Ensure the canvas can composite over CSS world
+  renderer.domElement.style.display = "block";
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x0c0a1a, 0.045);
 
   const camera = new THREE.PerspectiveCamera(
     55,
-    window.innerWidth / window.innerHeight,
+    startW / startH,
     0.1,
     120
   );
@@ -1040,8 +1069,8 @@ export async function initLab3D(opts) {
   korkiGlow.position.z = -0.06;
   korkiGroup.add(korkiGlow);
 
-  // Floating dust particles (a bit denser in the packed room)
-  const pCount = reduced ? 500 : 1600;
+  // Floating dust particles (visible ambient drift)
+  const pCount = reduced ? 600 : 2000;
   const pGeo = new THREE.BufferGeometry();
   const pPos = new Float32Array(pCount * 3);
   const pSpd = new Float32Array(pCount);
@@ -1049,16 +1078,17 @@ export async function initLab3D(opts) {
     pPos[i * 3] = (Math.random() - 0.5) * 14;
     pPos[i * 3 + 1] = Math.random() * 4;
     pPos[i * 3 + 2] = -Math.random() * 70 + 8;
-    pSpd[i] = 0.15 + Math.random() * 0.4;
+    pSpd[i] = 0.35 + Math.random() * 0.85;
   }
   pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
   const pMat = new THREE.PointsMaterial({
-    color: 0x9cf5e8,
-    size: reduced ? 0.04 : 0.03,
+    color: 0xb8fff4,
+    size: reduced ? 0.05 : 0.042,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.7,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
+    sizeAttenuation: true,
   });
   const particles = new THREE.Points(pGeo, pMat);
   scene.add(particles);
@@ -1072,11 +1102,15 @@ export async function initLab3D(opts) {
   let targetPY = 0;
   let portalOpen = false;
   let running = true;
+  let paused = false;
+  let rafId = 0;
   let lastT = performance.now();
+  let elapsed = 0; // steady clock for ambient loops (survives tab throttling better)
 
-  const camPos = new THREE.Vector3();
-  const lookPos = new THREE.Vector3();
-  const korkiPos = new THREE.Vector3();
+  const camPos = new THREE.Vector3(0, 1.6, 7.5);
+  const lookPos = new THREE.Vector3(0, 1.2, 0);
+  const korkiPos = new THREE.Vector3(1.4, 1.15, 1.2);
+  korkiGroup.position.copy(korkiPos);
 
   function setProgress(p) {
     targetProgress = clamp(p, 0, 1);
@@ -1096,21 +1130,37 @@ export async function initLab3D(opts) {
   }
 
   function onResize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const { w, h } = sizeCanvas();
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, reduced ? 1.25 : 2));
-    renderer.setSize(w, h, false);
   }
   window.addEventListener("resize", onResize);
 
-  function tick(now) {
-    if (!running) return;
-    requestAnimationFrame(tick);
+  const onVisibility = () => {
+    paused = document.hidden;
+    if (!paused && running) {
+      lastT = performance.now();
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    }
+  };
+  document.addEventListener("visibilitychange", onVisibility);
 
+  function tick(now) {
+    if (!running) {
+      rafId = 0;
+      return;
+    }
+    rafId = requestAnimationFrame(tick);
+    if (paused) {
+      lastT = now;
+      return;
+    }
+
+    // Cap huge gaps (tab return) so ambient motion doesn't jump wildly
     const dt = clamp((now - lastT) / 1000, 0.001, 0.05);
     lastT = now;
+    elapsed += dt;
+    const t = elapsed;
 
     // smooth scrub into 3D path
     progress = lerp(progress, targetProgress, reduced ? 1 : 1 - Math.exp(-dt * 4.5));
@@ -1134,79 +1184,96 @@ export async function initLab3D(opts) {
     );
 
     // Korki follows path + gentle bob; faces camera
-    korkiGroup.position.x = lerp(korkiGroup.position.x, korkiPos.x, 0.08);
-    korkiGroup.position.y =
-      lerp(korkiGroup.position.y, korkiPos.y, 0.08) + Math.sin(now * 0.002) * 0.04;
-    korkiGroup.position.z = lerp(korkiGroup.position.z, korkiPos.z, 0.08);
+    korkiGroup.position.x = lerp(korkiGroup.position.x, korkiPos.x, 1 - Math.exp(-dt * 6));
+    korkiGroup.position.z = lerp(korkiGroup.position.z, korkiPos.z, 1 - Math.exp(-dt * 6));
+    const bob = Math.sin(t * 2.1) * 0.05;
+    korkiGroup.position.y = lerp(korkiGroup.position.y, korkiPos.y + bob, 1 - Math.exp(-dt * 8));
     korkiGroup.lookAt(camera.position.x, korkiGroup.position.y, camera.position.z);
 
     // Portal pulse / open
-    const portalScale = portalOpen ? 1.15 + Math.sin(now * 0.006) * 0.04 : 1 + Math.sin(now * 0.003) * 0.03;
+    const portalScale = portalOpen
+      ? 1.15 + Math.sin(t * 3.2) * 0.05
+      : 1 + Math.sin(t * 1.4) * 0.035;
     portalGroup.scale.setScalar(portalScale);
-    portalRing.rotation.z = now * 0.0008;
-    portalLight.intensity = portalOpen ? 3.2 : 1.4;
+    portalRing.rotation.z = t * 0.55;
+    portalInner.rotation.z = -t * 0.25;
+    portalLight.intensity = portalOpen
+      ? 3.2 + Math.sin(t * 4) * 0.4
+      : 1.5 + Math.sin(t * 2) * 0.35;
     portalLight.color.setHex(portalOpen ? 0xff6b2c : 0x2dd4bf);
 
     // Lab core animation
-    coreSphere.rotation.y += dt * 0.6;
-    coreSphere.rotation.x += dt * 0.25;
+    coreSphere.rotation.y += dt * 0.75;
+    coreSphere.rotation.x += dt * 0.35;
     orbitRings.forEach((r, i) => {
-      r.rotation.z += dt * (0.3 + i * 0.15) * (i % 2 ? -1 : 1);
+      r.rotation.z += dt * (0.45 + i * 0.2) * (i % 2 ? -1 : 1);
+      r.rotation.x += dt * 0.08 * (i + 1);
     });
-    toolOrbs.forEach((o, i) => {
-      o.angle += dt * (0.5 + i * 0.05);
+    toolOrbs.forEach((o) => {
+      o.angle += dt * (0.7 + o.radius * 0.05);
       o.mesh.position.set(
         Math.cos(o.angle) * o.radius,
-        Math.sin(o.angle * 1.3) * 0.35,
+        Math.sin(o.angle * 1.3) * 0.4,
         Math.sin(o.angle) * o.radius
       );
     });
 
     // Why pillars hover
     pillars.forEach((p, i) => {
-      p.position.y = 1.2 + Math.sin(now * 0.0015 + i) * 0.08;
-      p.rotation.y += dt * 0.25 * (i % 2 ? -1 : 1);
+      p.position.y = 1.2 + Math.sin(t * 1.4 + i * 1.1) * 0.1;
+      p.rotation.y += dt * 0.35 * (i % 2 ? -1 : 1);
     });
 
     // Quest cards subtle float
     questCards.forEach((c, i) => {
-      c.position.y = 1.3 + Math.sin(now * 0.0018 + i * 0.7) * 0.12;
-      c.rotation.y = (i % 2 === 0 ? -1 : 1) * 0.35 + Math.sin(now * 0.001 + i) * 0.05;
+      c.position.y = 1.3 + Math.sin(t * 1.6 + i * 0.7) * 0.14;
+      c.rotation.y =
+        (i % 2 === 0 ? -1 : 1) * 0.35 + Math.sin(t * 0.9 + i) * 0.08;
     });
 
-    // Dense prop floaters
-    floaters.forEach((c, i) => {
-      c.rotation.x += dt * (0.2 + (i % 3) * 0.05);
-      c.rotation.y += dt * (0.25 + (i % 4) * 0.04);
-      c.position.y += Math.sin(now * 0.001 + i) * 0.0008;
+    // Dense prop floaters — orbit around stored baseY
+    floaters.forEach((c) => {
+      const baseY = c.userData.baseY ?? c.position.y;
+      const phase = c.userData.phase ?? 0;
+      const speed = c.userData.speed ?? 1;
+      c.rotation.x += dt * 0.35;
+      c.rotation.y += dt * 0.45;
+      c.position.y = baseY + Math.sin(t * speed + phase) * 0.18;
     });
 
-    // Particles drift
+    // Particles drift (upward sparkle)
     const arr = particles.geometry.attributes.position.array;
     for (let i = 0; i < pCount; i++) {
-      arr[i * 3 + 1] += pSpd[i] * dt * 0.15;
-      if (arr[i * 3 + 1] > 4.2) arr[i * 3 + 1] = 0;
+      arr[i * 3 + 1] += pSpd[i] * dt * 0.55;
+      arr[i * 3] += Math.sin(t + i) * dt * 0.02;
+      if (arr[i * 3 + 1] > 4.2) {
+        arr[i * 3 + 1] = 0;
+        arr[i * 3] = (Math.random() - 0.5) * 14;
+        arr[i * 3 + 2] = -Math.random() * 70 + 8;
+      }
     }
     particles.geometry.attributes.position.needsUpdate = true;
 
-    // Mood fog density
+    // Mood fog density + living lights
     scene.fog.density = sample.fog;
     rim.position.z = camera.position.z - 4;
-    rim.intensity = 1.8 + Math.sin(now * 0.001) * 0.3;
+    rim.intensity = 1.9 + Math.sin(t * 1.2) * 0.45;
+    labCoreLight.intensity = 1.7 + Math.sin(t * 0.9) * 0.35;
 
     // Panel emissive pulse near camera
     panelMeshes.forEach((m) => {
       const d = Math.abs(m.position.z - camera.position.z);
       const near = clamp(1 - d / 14, 0.15, 1);
       if (m.material.emissiveIntensity !== undefined) {
-        m.material.emissiveIntensity = 0.2 + near * 0.45;
+        m.material.emissiveIntensity =
+          0.25 + near * 0.5 + Math.sin(t * 2 + d) * 0.05;
       }
     });
 
     renderer.render(scene, camera);
   }
 
-  requestAnimationFrame(tick);
+  rafId = requestAnimationFrame(tick);
 
   return {
     ready: true,
@@ -1216,7 +1283,10 @@ export async function initLab3D(opts) {
     setScene,
     dispose() {
       running = false;
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = 0;
       window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", onVisibility);
       renderer.dispose();
       scene.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose();
