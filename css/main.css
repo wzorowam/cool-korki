@@ -773,12 +773,18 @@ h3 {
 /* ========== PIN SCENES (scroll storytelling) ========== */
 .pin-scene {
   position: relative;
-  height: 180vh;
+  /* Slightly shorter first chapters = snappier handoff */
+  height: 160vh;
   z-index: 1;
 }
 
+#start.pin-scene {
+  /* Gateway: short hold + clear exit into story */
+  height: 140vh;
+}
+
 .pin-scene.pin-long {
-  height: 280vh;
+  height: 260vh;
 }
 
 .pin-sticky {
@@ -799,18 +805,28 @@ h3 {
   justify-content: center;
   position: relative;
   transform-style: preserve-3d;
-  /* --scene-p is already smoothstep-lerped in JS */
-  --enter: clamp(0, calc((var(--scene-p) - 0.04) * 3.2), 1);
-  --exit: clamp(0, calc((var(--scene-p) - 0.88) * 7), 1);
-  opacity: calc(var(--enter) * (1 - var(--exit) * 0.4) + 0.12);
+  /*
+   * Sticky pin model: scene-p = 0 when the chapter first sticks (must be fully visible).
+   * Only EXIT as you leave the pin — never treat p≈0 as "not entered yet".
+   */
+  --scene-p: 0;
+  --enter: 1;
+  --exit: clamp(0, calc((var(--scene-p) - 0.72) / 0.28), 1);
+  opacity: calc(1 - var(--exit) * 0.55);
   transform:
     translate3d(
-      calc(var(--mx) * 10px),
-      calc(var(--my) * 7px + (1 - var(--enter)) * 32px + var(--exit) * -24px),
+      calc(var(--mx) * 8px),
+      calc(var(--my) * 5px + var(--exit) * -28px),
       0
     )
-    scale(calc(0.96 + var(--enter) * 0.04 - var(--exit) * 0.025));
+    scale(calc(1 - var(--exit) * 0.035));
   will-change: transform, opacity;
+  transition: none;
+}
+
+/* Gateway holds a beat longer before exit feels aggressive */
+#start .scene-stage {
+  --exit: clamp(0, calc((var(--scene-p) - 0.62) / 0.38), 1);
 }
 
 .scene-stage.scene-dim::after {
@@ -1221,9 +1237,12 @@ h3 {
   background: var(--bg-card);
   border: 1px solid var(--border);
   backdrop-filter: blur(12px);
-  transform: translateZ(calc(var(--z, 1) * 20px))
-    translateY(calc((1 - var(--enter, 1)) * 24px * var(--z, 1)));
-  transition: border-color 0.25s, box-shadow 0.25s;
+  /* --card-in 0→1 from JS; floor so cards aren't ghosted at chapter start */
+  --card-in: 1;
+  opacity: calc(0.35 + var(--card-in) * 0.65);
+  transform: translateZ(calc(var(--z, 1) * 16px))
+    translateY(calc((1 - var(--card-in)) * 18px));
+  transition: border-color 0.25s, box-shadow 0.25s, opacity 0.35s var(--ease), transform 0.35s var(--ease);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
@@ -1841,10 +1860,84 @@ h3 {
 }
 
 /* Enter animations driven by scene progress */
+/*
+ * data-enter = one-shot intro when a chapter is shown, NOT scroll-linked fade-in.
+ * (Scroll-linked enter was the gateway bug: p=0 ⇒ ghosted hero on load.)
+ */
 [data-enter] {
-  opacity: calc(0.2 + var(--enter, 1) * 0.8);
-  transform: translate3d(0, calc((1 - var(--enter, 1)) * 28px), 0);
-  transition: opacity 0.15s linear, transform 0.15s linear;
+  opacity: 1;
+  transform: none;
+  animation: scene-rise 0.85s var(--ease) both;
+}
+
+[data-enter="left"] {
+  animation-name: scene-rise-left;
+}
+
+[data-enter="right"] {
+  animation-name: scene-rise-right;
+}
+
+[data-enter="up"] {
+  animation-name: scene-rise;
+}
+
+.hero-copy[data-enter] {
+  animation-delay: 0.06s;
+}
+
+.hero-visual[data-enter] {
+  animation-delay: 0.16s;
+}
+
+.scene-content > .section-label[data-enter] {
+  animation-delay: 0.02s;
+}
+
+.scene-content > h2[data-enter] {
+  animation-delay: 0.08s;
+}
+
+.scene-content > .lead[data-enter] {
+  animation-delay: 0.14s;
+}
+
+@keyframes scene-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes scene-rise-left {
+  from {
+    opacity: 0;
+    transform: translate3d(-28px, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes scene-rise-right {
+  from {
+    opacity: 0;
+    transform: translate3d(28px, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Replay intro when a pin chapter becomes the active scene */
+.pin-scene.is-active [data-enter] {
+  animation-play-state: running;
 }
 
 /* Responsive */
@@ -1967,6 +2060,20 @@ h3 {
   }
 
   .scene-stage {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  [data-enter],
+  .hero-copy[data-enter],
+  .hero-visual[data-enter] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .story-card,
+  .depth-card {
     opacity: 1 !important;
     transform: none !important;
   }
