@@ -117,7 +117,8 @@ body::before {
   height: 100%;
   display: block;
   opacity: 0;
-  transition: opacity 0.9s var(--ease);
+  transition: opacity 1s var(--ease);
+  z-index: 1;
 }
 
 body[data-webgl="on"] .lab3d-canvas {
@@ -127,11 +128,16 @@ body[data-webgl="on"] .lab3d-canvas {
 body[data-webgl="on"] .world-fallback {
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
 }
 
-/* When WebGL runs the room, drop 2D hero plate so the 3D space shows through */
+/* When WebGL runs, thin the hero plate so the room motion is visible */
 body[data-webgl="on"] .hero-bg-layer {
-  opacity: 0.25;
+  opacity: 0.12;
+}
+
+body[data-webgl="on"] .hero-bg-layer img {
+  opacity: 0.35;
 }
 
 body[data-webgl="on"] .scene-stage.scene-dim::after {
@@ -167,14 +173,14 @@ body[data-webgl="pending"] .lab3d-canvas {
   opacity: 0.7;
 }
 
-/* Slight glass over WebGL so UI text stays readable */
+/* Lighter glass — heavy vignette was killing visible room motion */
 body[data-webgl="on"] .world::after {
   content: "";
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 70% 55% at 50% 45%, transparent 0%, rgba(12, 10, 26, 0.35) 100%),
-    linear-gradient(180deg, rgba(12, 10, 26, 0.15) 0%, transparent 30%, rgba(12, 10, 26, 0.45) 100%);
+    radial-gradient(ellipse 75% 60% at 50% 42%, transparent 0%, rgba(12, 10, 26, 0.22) 100%),
+    linear-gradient(180deg, rgba(12, 10, 26, 0.08) 0%, transparent 28%, rgba(12, 10, 26, 0.32) 100%);
   pointer-events: none;
   z-index: 2;
 }
@@ -192,10 +198,11 @@ body[data-webgl="on"] .world::after {
 .world-fog {
   position: absolute;
   inset: -20%;
-  background: radial-gradient(circle at 50% 60%, hsla(var(--mood), 80%, 50%, 0.12), transparent 55%);
+  background: radial-gradient(circle at 50% 60%, hsla(var(--mood), 80%, 50%, 0.14), transparent 55%);
   transform: translate3d(calc(var(--mx) * -20px), calc(var(--my) * -14px + var(--world-shift)), 0);
   transition: background 0.6s ease;
   filter: blur(2px);
+  will-change: opacity, transform;
 }
 
 .depth-stage {
@@ -218,6 +225,7 @@ body[data-webgl="on"] .world::after {
   border-radius: 50%;
   filter: blur(60px);
   opacity: 0.45;
+  will-change: transform, opacity;
 }
 
 .o1 {
@@ -226,7 +234,8 @@ body[data-webgl="on"] .world::after {
   background: var(--teal);
   top: 8%;
   left: 5%;
-  opacity: 0.18;
+  opacity: 0.22;
+  animation: orb-drift-a 14s ease-in-out infinite;
 }
 
 .o2 {
@@ -235,7 +244,18 @@ body[data-webgl="on"] .world::after {
   background: var(--violet);
   bottom: 10%;
   right: 0;
-  opacity: 0.2;
+  opacity: 0.24;
+  animation: orb-drift-b 18s ease-in-out infinite;
+}
+
+@keyframes orb-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.18; }
+  50% { transform: translate3d(4vw, 3vh, 0) scale(1.12); opacity: 0.32; }
+}
+
+@keyframes orb-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.2; }
+  50% { transform: translate3d(-3vw, -4vh, 0) scale(1.08); opacity: 0.34; }
 }
 
 .ring {
@@ -243,6 +263,7 @@ body[data-webgl="on"] .world::after {
   border: 1px solid rgba(45, 212, 191, 0.2);
   border-radius: 50%;
   box-shadow: 0 0 40px rgba(45, 212, 191, 0.08);
+  will-change: transform;
 }
 
 .r1 {
@@ -250,7 +271,9 @@ body[data-webgl="on"] .world::after {
   height: min(70vw, 560px);
   top: 15%;
   left: 50%;
-  transform: translateX(-50%) rotateX(65deg);
+  margin-left: calc(min(70vw, 560px) / -2);
+  animation: ring-spin-a 28s linear infinite;
+  transform-style: preserve-3d;
 }
 
 .r2 {
@@ -259,7 +282,17 @@ body[data-webgl="on"] .world::after {
   bottom: 5%;
   left: 20%;
   border-color: rgba(255, 107, 44, 0.18);
-  transform: rotateX(70deg) rotateZ(20deg);
+  animation: ring-spin-b 36s linear infinite reverse;
+}
+
+@keyframes ring-spin-a {
+  from { transform: rotateX(65deg) rotateZ(0deg); }
+  to { transform: rotateX(65deg) rotateZ(360deg); }
+}
+
+@keyframes ring-spin-b {
+  from { transform: rotateX(70deg) rotateZ(20deg); }
+  to { transform: rotateX(70deg) rotateZ(380deg); }
 }
 
 .shard {
@@ -270,12 +303,41 @@ body[data-webgl="on"] .world::after {
   background: linear-gradient(135deg, rgba(45, 212, 191, 0.12), rgba(79, 70, 229, 0.08));
   backdrop-filter: blur(4px);
   border-radius: 1rem;
-  transform: rotate(25deg);
+  will-change: transform;
 }
 
-.s1 { top: 22%; right: 12%; width: 60px; height: 60px; }
-.s2 { top: 55%; left: 8%; width: 44px; height: 44px; transform: rotate(-15deg); opacity: 0.7; }
-.s3 { bottom: 18%; right: 28%; width: 36px; height: 36px; transform: rotate(40deg); opacity: 0.5; }
+.s1 {
+  top: 22%;
+  right: 12%;
+  width: 60px;
+  height: 60px;
+  animation: shard-float 9s ease-in-out infinite;
+}
+
+.s2 {
+  top: 55%;
+  left: 8%;
+  width: 44px;
+  height: 44px;
+  opacity: 0.7;
+  animation: shard-float 11s ease-in-out infinite reverse;
+  animation-delay: -2s;
+}
+
+.s3 {
+  bottom: 18%;
+  right: 28%;
+  width: 36px;
+  height: 36px;
+  opacity: 0.5;
+  animation: shard-float 8s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
+@keyframes shard-float {
+  0%, 100% { transform: translateY(0) rotate(25deg); }
+  50% { transform: translateY(-18px) rotate(40deg); }
+}
 
 .float-card {
   position: absolute;
@@ -288,13 +350,29 @@ body[data-webgl="on"] .world::after {
   background: rgba(28, 24, 56, 0.7);
   border: 1px solid var(--border-strong);
   box-shadow: var(--glow-teal);
-  opacity: 0.55;
+  opacity: 0.65;
+  will-change: transform;
+  animation: card-bob 6.5s ease-in-out infinite;
 }
 
-.fc1 { top: 18%; left: 12%; }
-.fc2 { top: 30%; right: 10%; }
-.fc3 { bottom: 28%; left: 18%; }
-.fc4 { bottom: 20%; right: 16%; }
+.fc1 { top: 18%; left: 12%; animation-delay: 0s; }
+.fc2 { top: 30%; right: 10%; animation-delay: -1.5s; }
+.fc3 { bottom: 28%; left: 18%; animation-delay: -3s; }
+.fc4 { bottom: 20%; right: 16%; animation-delay: -4.5s; }
+
+@keyframes card-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-14px) rotate(3deg); }
+}
+
+.world-fog {
+  animation: fog-breathe 12s ease-in-out infinite;
+}
+
+@keyframes fog-breathe {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
 
 /* XP bar */
 .xp-bar {
@@ -2043,8 +2121,17 @@ h3 {
   .portal-spin,
   .hero-badge .dot,
   .scroll-orb::after,
-  .video-portal.invite .portal-frame {
-    animation: none;
+  .video-portal.invite .portal-frame,
+  .o1,
+  .o2,
+  .r1,
+  .r2,
+  .s1,
+  .s2,
+  .s3,
+  .float-card,
+  .world-fog {
+    animation: none !important;
   }
 
   .pin-scene,
