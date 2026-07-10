@@ -25,11 +25,19 @@ import { initLab3D } from "./lab3d.js";
       return;
     }
     try {
+      // Ensure canvas has layout size before Three measures it
+      canvas.width = Math.max(1, window.innerWidth);
+      canvas.height = Math.max(1, window.innerHeight);
       lab3d = await initLab3D({ canvas, reduced: false });
       if (lab3d?.ready) {
         webglOn = true;
         document.body.dataset.webgl = "on";
         document.body.classList.add("has-webgl");
+        // Prime camera with current scroll so the room isn't frozen at path 0
+        const docH =
+          document.documentElement.scrollHeight - window.innerHeight;
+        const p = docH > 0 ? clamp(window.scrollY / docH, 0, 1) : 0;
+        lab3d.setProgress(p);
       } else {
         document.body.dataset.webgl = "off";
       }
@@ -830,32 +838,41 @@ import { initLab3D } from "./lab3d.js";
   /* ---------- Boot ---------- */
   updateSoundUI();
 
+  // Always start CSS ambient (stars + fallback layers) immediately so the
+  // background is never dead while WebGL boots — or if WebGL fails.
+  if (!reduced) {
+    initStars();
+    window.addEventListener("resize", () => initStars(), { passive: true });
+  }
+  requestAnimationFrame(tick);
+
   bootLab3D().then(() => {
-    if (!webglOn) {
-      initStars();
-      window.addEventListener("resize", () => initStars(), { passive: true });
+    // Keep starfield as underlay only when WebGL is off
+    if (webglOn) {
+      // free 2d canvas work — WebGL owns the background loop
+      stars = [];
+      ctx2d = null;
     }
-    requestAnimationFrame(tick);
 
     window.setTimeout(() => {
       if (webglOn) {
         if (tipEl) {
           tipEl.innerHTML =
-            "<strong>WebGL Lab 🚀</strong>Scroll = walk through the 3D room. Turn Sound on for full vibe.";
+            "<strong>WebGL Lab 🚀</strong>Scroll = walk the 3D room. Background keeps animating.";
         }
       } else {
         renderTip("start");
       }
       showTip();
       window.setTimeout(() => {
-        if (currentScene === "start") hideTip();
+        if (currentScene === "start" || currentScene === "") hideTip();
       }, 5500);
     }, 600);
   });
 
   // gentle portal pulse invite
   window.setTimeout(() => {
-    if (currentScene === "start" && !portalOpenState) {
+    if ((currentScene === "start" || currentScene === "") && !portalOpenState) {
       portal?.classList.add("invite");
     }
   }, 2800);
