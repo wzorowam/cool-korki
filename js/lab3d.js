@@ -13,12 +13,20 @@ const smoothstep = (t) => {
 
 /** Scene keyframes: progress 0–1 → camera + lookAt + korki */
 const PATH = [
-  // Gateway
+  // Gateway — hold the opening shot so first scroll doesn't yank the room
   {
     p: 0,
     cam: [0, 1.6, 7.5],
     look: [0, 1.2, 0],
     korki: [1.4, 1.15, 1.2],
+    hue: 185,
+    fog: 0.045,
+  },
+  {
+    p: 0.07,
+    cam: [0.15, 1.55, 6.8],
+    look: [0.2, 1.2, -0.5],
+    korki: [1.35, 1.15, 1.0],
     hue: 185,
     fog: 0.045,
   },
