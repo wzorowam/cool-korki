@@ -404,7 +404,7 @@ import { initLab3D } from "./lab3d.js";
     },
   };
 
-  let currentScene = "start";
+  let currentScene = ""; // empty until first sample — avoids false transition FX on boot
   let tipOpen = false;
   const tipEl = $("#korki-tip");
   const tipBtn = $("#korki-btn");
@@ -434,10 +434,19 @@ import { initLab3D } from "./lab3d.js";
   const setActiveScene = (sceneEl) => {
     if (!sceneEl) return;
     const id = sceneEl.dataset.scene || "start";
-    if (id === currentScene) return;
+    if (id === currentScene) {
+      // keep is-active class in sync even when id unchanged (first paint)
+      allScenes.forEach((s) =>
+        s.classList.toggle("is-active", s === sceneEl)
+      );
+      return;
+    }
     const prev = currentScene;
     currentScene = id;
     document.body.dataset.scene = id;
+    allScenes.forEach((s) =>
+      s.classList.toggle("is-active", s === sceneEl)
+    );
     if (chapterNum) chapterNum.textContent = sceneEl.dataset.chapter || "00";
     if (chapterName) chapterName.textContent = sceneEl.dataset.title || "";
     railStops.forEach((btn) => {
@@ -445,10 +454,12 @@ import { initLab3D } from "./lab3d.js";
     });
     if (tipOpen) renderTip(id);
 
-    // chapter transition feedback
+    // chapter transition feedback (skip whoosh on boot when landing on start)
     const idx = sceneOrder.indexOf(id);
-    SoundLab.whoosh();
-    SoundLab.chapterStinger(Math.max(idx, 0));
+    if (prev) {
+      SoundLab.whoosh();
+      SoundLab.chapterStinger(Math.max(idx, 0));
+    }
     const hue = getComputedStyle(document.body).getPropertyValue("--mood") || "180";
     SoundLab.setMood(hue);
 
@@ -465,13 +476,28 @@ import { initLab3D } from "./lab3d.js";
       document.body.classList.add("has-entered");
     }
 
+    // re-trigger chapter intro animations when entering a pin scene
+    if (sceneEl.classList.contains("pin-scene")) {
+      sceneEl.querySelectorAll("[data-enter]").forEach((el) => {
+        el.style.animation = "none";
+        void el.offsetWidth;
+        el.style.animation = "";
+      });
+    }
+
     lab3d?.setScene?.(id);
   };
 
+  /**
+   * Sticky pin progress: 0 when chapter first sticks (fully on screen),
+   * 1 when about to unstick. Never negative "pre-enter" for opacity hacks.
+   */
   const rawSceneProgress = (el) => {
     const rect = el.getBoundingClientRect();
-    const vh = window.innerHeight;
+    const vh = window.innerHeight || 1;
     const total = Math.max(el.offsetHeight - vh, 1);
+    // When section is still below the fold, keep progress at 0 (visible when it arrives)
+    if (rect.top > 0) return 0;
     return clamp(-rect.top / total, 0, 1);
   };
 
@@ -603,24 +629,28 @@ import { initLab3D } from "./lab3d.js";
       const raw = rawSceneProgress(scene);
       const id = scene.id || scene.dataset.scene;
       const prev = smoothScenes.get(id) ?? raw;
+      // Lerp only — no second smoothstep (that delayed the gateway feel)
       const p = lerp(prev, raw, scrub);
       smoothScenes.set(id, p);
 
-      const eased = smoothstep(p);
-      scene.style.setProperty("--scene-p", eased.toFixed(4));
+      scene.style.setProperty("--scene-p", p.toFixed(4));
       const sticky = scene.querySelector(".scene-stage");
-      if (sticky) sticky.style.setProperty("--scene-p", eased.toFixed(4));
+      if (sticky) sticky.style.setProperty("--scene-p", p.toFixed(4));
 
-      // Why stack — smooth step crossfade
+      // Why stack — use mid band of pin scroll (hold → flip → exit)
       if (scene.id === "why" && whyPanels.length) {
-        targetWhyStep = p * (whyPanels.length - 0.001);
-        whyStepSmooth = lerp(whyStepSmooth, targetWhyStep, scrub * 1.2);
-        const step = Math.floor(whyStepSmooth);
+        // map 0.08–0.72 of pin into panel steps
+        const whyT = clamp((p - 0.08) / 0.64, 0, 0.999);
+        targetWhyStep = whyT * whyPanels.length;
+        whyStepSmooth = lerp(whyStepSmooth, targetWhyStep, scrub * 1.15);
+        const step = Math.min(
+          whyPanels.length - 1,
+          Math.floor(whyStepSmooth)
+        );
         const frac = whyStepSmooth - step;
         whyPanels.forEach((panel, i) => {
           panel.classList.toggle("is-active", i === step);
           panel.classList.toggle("is-past", i < step);
-          // sub-progress for active panel scale
           if (i === step) {
             panel.style.setProperty("--step-p", frac.toFixed(3));
           }
@@ -628,18 +658,19 @@ import { initLab3D } from "./lab3d.js";
         whyDots.forEach((d, i) => d.classList.toggle("is-on", i === step));
       }
 
-      // Quest tunnel — smoothed translate
+      // Quest tunnel — pan across most of the pin, ease ends
       if (scene.id === "adventures" && questTrack) {
         const maxShift = Math.max(
           questTrack.scrollWidth - window.innerWidth + 80,
           0
         );
-        const targetX = -eased * maxShift;
-        smoothQuestX = lerp(smoothQuestX, targetX, scrub * 1.1);
-        const rot = (eased - 0.5) * 6;
+        const tunnelT = smoothstep(clamp((p - 0.05) / 0.75, 0, 1));
+        const targetX = -tunnelT * maxShift;
+        smoothQuestX = lerp(smoothQuestX, targetX, scrub * 1.05);
+        const rot = (tunnelT - 0.5) * 4;
         questTrack.style.transform = reduced
           ? "none"
-          : `translate3d(${smoothQuestX.toFixed(2)}px, 0, 0) rotateY(${(rot * 0.25).toFixed(3)}deg)`;
+          : `translate3d(${smoothQuestX.toFixed(2)}px, 0, 0) rotateY(${(rot * 0.2).toFixed(3)}deg)`;
 
         const center = window.innerWidth / 2;
         let focusIdx = 0;
@@ -656,13 +687,14 @@ import { initLab3D } from "./lab3d.js";
         questCards.forEach((c, i) => c.classList.toggle("is-focus", i === focusIdx));
       }
 
-      scene.querySelectorAll("[data-z]").forEach((card) => {
+      // Depth cards: always reasonably visible; slight lift as chapter progresses
+      scene.querySelectorAll("[data-z]").forEach((card, i) => {
         const z = Number(card.dataset.z) || 1;
+        const stagger = i * 0.04;
+        const cardIn = clamp(0.55 + p * 0.7 - stagger, 0, 1);
         card.style.setProperty("--z", z);
-        card.style.setProperty(
-          "--enter",
-          clamp((eased - 0.06) * 2.8, 0, 1).toFixed(3)
-        );
+        card.style.setProperty("--card-in", cardIn.toFixed(3));
+        card.style.setProperty("--enter", "1");
       });
     }
 
@@ -677,11 +709,16 @@ import { initLab3D } from "./lab3d.js";
         : `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, ${tz.toFixed(2)}px)`;
     });
 
-    // portal parallax slight
+    // portal parallax — gentle; don't yank it during gateway hold
     if (portal && !reduced) {
       const pr = smoothScenes.get("start") ?? 0;
-      portal.style.transform = `translate3d(${(mx * 14).toFixed(2)}px, ${(my * 10 - pr * 30).toFixed(2)}px, 0)`;
+      const exitLift = clamp((pr - 0.55) / 0.45, 0, 1) * 36;
+      portal.style.transform = `translate3d(${(mx * 12).toFixed(2)}px, ${(my * 8 - exitLift).toFixed(2)}px, 0)`;
     }
+
+    // scroll cue fades as gateway progresses (not only on scene change)
+    const startP = smoothScenes.get("start") ?? 0;
+    if (startP > 0.2) document.body.classList.add("has-entered");
 
     const idx = sceneOrder.indexOf(currentScene);
     railStops.forEach((btn) => {
@@ -689,10 +726,9 @@ import { initLab3D } from "./lab3d.js";
       btn.classList.toggle("is-done", gi >= 0 && gi < idx);
     });
 
-    // close portal when leaving gateway deeply
-    if (portalOpenState && currentScene !== "start") {
-      const startP = smoothScenes.get("start") ?? 0;
-      if (startP > 0.55) closePortal();
+    // close portal when gateway is mostly scrolled through
+    if (portalOpenState && (currentScene !== "start" || startP > 0.7)) {
+      closePortal();
     }
 
     return { rawGlobal, scrub };
