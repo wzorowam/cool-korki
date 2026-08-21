@@ -1,0 +1,16 @@
+{
+  "name": "Cool Korki",
+  "terminals": [
+    {
+      "name": "web",
+      "command": "python3 -m http.server 8765 --bind 0.0.0.0",
+      "description": "Static file server for the Cool Korki site. Open http://localhost:8765"
+    }
+  ],
+  "ports": [
+    {
+      "name": "web server",
+      "port": 8765
+    }
+  ]
+}
