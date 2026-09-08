@@ -1070,11 +1070,48 @@ h3 {
   line-height: 1.7;
 }
 
+.hero-who {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin: -0.75rem 0 1.5rem;
+  line-height: 1.55;
+}
+
+.hero-who span {
+  color: var(--teal);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.75rem 1.1rem;
   margin-bottom: 2rem;
+}
+
+.hero-quiet {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.hero-quiet:hover {
+  color: var(--text);
+}
+
+.offer-quiet {
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.35rem;
 }
 
 .hero-note {
@@ -1674,7 +1711,7 @@ h3 {
 }
 
 .offer.featured::before {
-  content: "popularny start";
+  content: "lekki start";
   position: absolute;
   top: -0.65rem;
   left: 1.25rem;

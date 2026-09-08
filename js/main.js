@@ -422,8 +422,8 @@ import { initLab3D } from "./lab3d.js";
 
   const tips = {
     start: {
-      title: "Gateway 🚀",
-      body: "Otwórz Hello portal albo scroll wolno — każdy rozdział ma swój sound color.",
+      title: "Night lab 🚀",
+      body: "Jeden next step: zostaw sygnał. Albo scroll — rozdziały same się otwierają.",
     },
     story: {
       title: "Setup",
@@ -443,11 +443,11 @@ import { initLab3D } from "./lab3d.js";
     },
     paths: {
       title: "Paths",
-      body: "Soft offer zone. Zero pressure — wybierz albo napisz „nie wiem”.",
+      body: "Orientacja, nie ulotka. Jak nie wiesz — napisz „nie wiem”.",
     },
     hello: {
       title: "Hello",
-      body: "Ostatni checkpoint. Zostaw sygnał. Catch you soon 🪩",
+      body: "Jedyny next step. Imię + mail. Catch you soon 🪩",
     },
   };
 
