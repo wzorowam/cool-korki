@@ -2223,6 +2223,10 @@ h3 {
 }
 
 @media (max-width: 899px) {
+  .nav-cta {
+    display: none !important;
+  }
+
   .chapter-hud {
     top: auto;
     bottom: calc(6.4rem + env(safe-area-inset-bottom, 0px));
@@ -2370,8 +2374,10 @@ h3 {
   }
 
   .orbit-item {
-    position: static;
-    transform: none;
+    position: static !important;
+    left: auto;
+    top: auto;
+    transform: none !important;
     margin: 0.3rem;
   }
 
