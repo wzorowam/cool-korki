@@ -6,9 +6,23 @@
   <title>Cool Korki — Discovery Adventure</title>
   <meta name="description" content="Cool Korki — przygoda z angielskim dla dorosłych w Polsce. Night lab, AI buddy, zero salesy. Nie bot od zadań." />
   <meta name="theme-color" content="#0c0a1a" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="canonical" href="https://cool-korki.vercel.app/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="pl_PL" />
+  <meta property="og:site_name" content="Cool Korki" />
+  <meta property="og:title" content="Cool Korki — Discovery Adventure" />
+  <meta property="og:description" content="Przygoda z angielskim dla dorosłych w Polsce. Night lab, nie kurs z ulotki." />
+  <meta property="og:url" content="https://cool-korki.vercel.app/" />
+  <meta property="og:image" content="https://cool-korki.vercel.app/assets/korki-character.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cool Korki — Discovery Adventure" />
+  <meta name="twitter:description" content="Przygoda z angielskim dla dorosłych w Polsce. Night lab, nie kurs z ulotki." />
+  <meta name="twitter:image" content="https://cool-korki.vercel.app/assets/korki-character.jpg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="preload" as="image" href="assets/korki-character.jpg" />
   <link rel="stylesheet" href="css/main.css" />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/korki-character.jpg" />
@@ -110,19 +124,12 @@
   <!-- CHAPTER HUD + SOUND -->
   <div class="chapter-hud" id="chapter-hud" aria-live="polite">
     <span class="chapter-num" id="chapter-num">00</span>
-    <span class="chapter-name" id="chapter-name">Gateway</span>
-  </div>
-
-  <div class="exp-controls">
-    <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" aria-label="Dźwięk wyłączony">
-      <span class="sound-icon" aria-hidden="true">🔇</span>
-      <span class="sound-label">Dźwięk off</span>
-    </button>
+    <span class="chapter-name" id="chapter-name">Night lab</span>
   </div>
 
   <main id="main" tabindex="-1">
     <!-- SCENE 0 · GATEWAY (pinned cinematic) -->
-    <section class="pin-scene" id="start" data-scene="start" data-chapter="00" data-title="Gateway" data-mood="dawn">
+    <section class="pin-scene" id="start" data-scene="start" data-chapter="00" data-title="Night lab" data-mood="dawn">
       <div class="pin-sticky">
         <div class="scene-stage" data-tilt>
           <div class="hero-bg-layer" data-parallax="0.15">
@@ -497,6 +504,13 @@
       </ul>
     </div>
   </footer>
+
+  <div class="exp-controls">
+    <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" aria-label="Dźwięk wyłączony">
+      <span class="sound-icon" aria-hidden="true">🔇</span>
+      <span class="sound-label">Dźwięk off</span>
+    </button>
+  </div>
 
   <!-- Guide bubble (character tips) -->
   <div class="korki-nav">

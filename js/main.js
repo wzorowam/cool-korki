@@ -327,6 +327,18 @@ import { initLab3D } from "./lab3d.js";
         closeMenu();
         menuBtn.focus();
       }
+      return;
+    }
+    if (e.key !== "Tab") return;
+    if (menuBtn?.getAttribute("aria-expanded") !== "true") return;
+    const items = [menuBtn, ...mobileMenu.querySelectorAll("a")];
+    const i = items.indexOf(document.activeElement);
+    if (e.shiftKey && (i <= 0)) {
+      e.preventDefault();
+      items[items.length - 1]?.focus();
+    } else if (!e.shiftKey && i === items.length - 1) {
+      e.preventDefault();
+      items[0]?.focus();
     }
   });
 
