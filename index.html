@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Cool Korki — Discovery Adventure</title>
   <meta name="description" content="Cool Korki: immersive English learning adventure with AI, neuroscience, and zero salesy vibes." />
   <meta name="theme-color" content="#0c0a1a" />
@@ -10,7 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/main.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='10' fill='%234f46e5'/><text x='16' y='21' text-anchor='middle' font-size='11' font-family='system-ui' font-weight='800' fill='white'>CK</text></svg>" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/korki-character.jpg" />
   <script type="importmap">
   {
     "imports": {
@@ -20,6 +21,7 @@
   </script>
 </head>
 <body data-scene="start" data-progress="0" data-webgl="pending">
+  <a class="skip-link" href="#main">Przejdź do treści</a>
   <!-- 3D WORLD LAYER (fixed behind content) -->
   <div class="world" id="world" aria-hidden="true">
     <!-- Real WebGL lab room -->
@@ -90,7 +92,7 @@
         <li><a href="#paths">Ścieżki</a></li>
       </ul>
       <a href="#hello" class="btn btn-primary nav-cta">Hej, pogadajmy</a>
-      <button class="menu-btn" id="menu-btn" type="button" aria-label="Otwórz menu" aria-expanded="false">
+      <button class="menu-btn" id="menu-btn" type="button" aria-label="Otwórz menu" aria-expanded="false" aria-controls="mobile-menu">
         <span></span>
       </button>
     </div>
@@ -112,13 +114,13 @@
   </div>
 
   <div class="exp-controls">
-    <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" title="Sound on/off">
+    <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" aria-label="Dźwięk wyłączony">
       <span class="sound-icon" aria-hidden="true">🔇</span>
-      <span class="sound-label">Sound off</span>
+      <span class="sound-label">Dźwięk off</span>
     </button>
   </div>
 
-  <main id="top">
+  <main id="main" tabindex="-1">
     <!-- SCENE 0 · GATEWAY (pinned cinematic) -->
     <section class="pin-scene" id="start" data-scene="start" data-chapter="00" data-title="Gateway" data-mood="dawn">
       <div class="pin-sticky">
@@ -166,6 +168,7 @@
                     loop
                     preload="metadata"
                   ></video>
+                  <p class="portal-error" id="portal-error" hidden>Portal video offline — zostaje Korki.</p>
                   <img
                     class="portal-poster"
                     id="portal-poster"
@@ -424,14 +427,17 @@
           Zostaw poziom, cel albo „TEST B1”. Wrócimy z czymś konkretnym — albo z żartem.
         </p>
         <div class="contact-box reveal">
-          <form class="contact-form" id="contact-form" novalidate>
+          <form class="contact-form" id="contact-form" action="mailto:hello@coolkorki.com" method="post" enctype="text/plain" novalidate>
+            <p class="form-error" id="form-error" role="alert" hidden></p>
             <div class="field">
               <label for="name">Imię</label>
-              <input id="name" name="name" type="text" autocomplete="name" placeholder="np. Asia" required />
+              <input id="name" name="name" type="text" autocomplete="name" placeholder="np. Asia" required aria-describedby="name-error" />
+              <span class="field-error" id="name-error" hidden></span>
             </div>
             <div class="field">
               <label for="email">Email</label>
-              <input id="email" name="email" type="email" autocomplete="email" placeholder="ty@mail.com" required />
+              <input id="email" name="email" type="email" autocomplete="email" placeholder="ty@mail.com" required aria-describedby="email-error" />
+              <span class="field-error" id="email-error" hidden></span>
             </div>
             <div class="field">
               <label for="level">Twój poziom (na oko)</label>

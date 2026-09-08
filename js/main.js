@@ -252,7 +252,8 @@ import { initLab3D } from "./lab3d.js";
     const icon = soundToggle.querySelector(".sound-icon");
     const label = soundToggle.querySelector(".sound-label");
     if (icon) icon.textContent = on ? "🔊" : "🔇";
-    if (label) label.textContent = on ? "Sound on" : "Sound off";
+    if (label) label.textContent = on ? "Dźwięk on" : "Dźwięk off";
+    soundToggle.setAttribute("aria-label", on ? "Dźwięk włączony" : "Dźwięk wyłączony");
   };
 
   soundToggle?.addEventListener("click", async () => {
@@ -276,12 +277,16 @@ import { initLab3D } from "./lab3d.js";
     mobileMenu.classList.remove("open");
     mobileMenu.hidden = true;
     menuBtn.setAttribute("aria-expanded", "false");
+    menuBtn.setAttribute("aria-label", "Otwórz menu");
   };
   const openMenu = () => {
     if (!mobileMenu || !menuBtn) return;
     mobileMenu.hidden = false;
     mobileMenu.classList.add("open");
     menuBtn.setAttribute("aria-expanded", "true");
+    menuBtn.setAttribute("aria-label", "Zamknij menu");
+    const first = mobileMenu.querySelector("a");
+    first?.focus();
   };
 
   menuBtn?.addEventListener("click", () => {
@@ -290,6 +295,14 @@ import { initLab3D } from "./lab3d.js";
     else openMenu();
   });
   mobileMenu?.querySelectorAll("a").forEach((a) => a.addEventListener("click", closeMenu));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (menuBtn?.getAttribute("aria-expanded") === "true") {
+        closeMenu();
+        menuBtn.focus();
+      }
+    }
+  });
 
   /* ---------- Starfield ---------- */
   const canvas = $("#starfield");
@@ -514,10 +527,40 @@ import { initLab3D } from "./lab3d.js";
   const portalVideo = $("#portal-video");
   const portalPlay = $("#portal-play");
   const portalPoster = $("#portal-poster");
+  const portalError = $("#portal-error");
   let portalOpenState = false;
+  let portalHasVideo = true;
+
+  const markPortalOffline = () => {
+    portalHasVideo = false;
+    portal?.classList.add("is-offline");
+    if (portalError) portalError.hidden = false;
+    portalPoster?.classList.remove("is-hidden");
+    if (portalPlay) {
+      const t = portalPlay.querySelector(".portal-play-text");
+      if (t) t.textContent = "Hello · scroll";
+      portalPlay.setAttribute("aria-label", "Przejdź do hello");
+    }
+  };
+
+  portalVideo?.addEventListener("error", markPortalOffline);
+  if (portalVideo) {
+    portalVideo.addEventListener("loadeddata", () => {
+      portalHasVideo = true;
+      if (portalError) portalError.hidden = true;
+    });
+  }
 
   const openPortal = async () => {
     if (!portal || portalOpenState) return;
+    if (!portalHasVideo) {
+      const hello = document.getElementById("hello");
+      if (hello) {
+        const top = hello.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top, behavior: reduced ? "auto" : "smooth" });
+      }
+      return;
+    }
     portalOpenState = true;
     portal.classList.add("is-open");
     lab3d?.setPortalOpen?.(true);
@@ -560,6 +603,10 @@ import { initLab3D } from "./lab3d.js";
     e.stopPropagation();
     if (portalOpenState) closePortal();
     else openPortal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && portalOpenState) closePortal();
   });
 
   portal?.addEventListener("click", (e) => {
@@ -809,29 +856,92 @@ import { initLab3D } from "./lab3d.js";
   /* ---------- Form ---------- */
   const form = $("#contact-form");
   const success = $("#form-success");
+  const formError = $("#form-error");
+  const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
+
+  const setFieldError = (id, message) => {
+    const input = $(`#${id}`);
+    const err = $(`#${id}-error`);
+    if (input) input.setAttribute("aria-invalid", message ? "true" : "false");
+    if (err) {
+      err.textContent = message || "";
+      err.hidden = !message;
+    }
+  };
+
+  const clearFormErrors = () => {
+    setFieldError("name", "");
+    setFieldError("email", "");
+    if (formError) {
+      formError.textContent = "";
+      formError.hidden = true;
+    }
+  };
+
+  form?.addEventListener("input", (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLElement)) return;
+    if (t.id === "name" || t.id === "email") setFieldError(t.id, "");
+    if (formError) formError.hidden = true;
+    success?.classList.remove("show");
+  });
+
   form?.addEventListener("submit", (e) => {
     e.preventDefault();
+    clearFormErrors();
+    success?.classList.remove("show");
     const data = Object.fromEntries(new FormData(form).entries());
-    if (!data.name || !data.email) {
-      form.reportValidity?.();
+    const name = String(data.name || "").trim();
+    const email = String(data.email || "").trim();
+    let bad = false;
+    if (!name) {
+      setFieldError("name", "Wpisz imię — choćby nick.");
+      bad = true;
+    }
+    if (!email) {
+      setFieldError("email", "Potrzebujemy maila, żeby wrócić z sygnałem.");
+      bad = true;
+    } else if (!emailOk(email)) {
+      setFieldError("email", "To nie wygląda jak email.");
+      bad = true;
+    }
+    if (bad) {
+      if (formError) {
+        formError.textContent = "Dwa pola na start: imię i email.";
+        formError.hidden = false;
+      }
+      const firstBad = form.querySelector('[aria-invalid="true"]');
+      firstBad?.focus();
       return;
     }
+    let stored = true;
     try {
       const key = "coolkorki_leads";
       const prev = JSON.parse(localStorage.getItem(key) || "[]");
-      prev.push({ ...data, at: new Date().toISOString() });
+      prev.push({ ...data, name, email, at: new Date().toISOString() });
       localStorage.setItem(key, JSON.stringify(prev));
     } catch {
-      /* ignore */
+      stored = false;
     }
     form.reset();
-    success?.classList.add("show");
+    clearFormErrors();
+    if (success) {
+      success.textContent = stored
+        ? "Sygnał odebrany. Cool Korki kiwa głową. Zapisane na tym urządzeniu — albo napisz: hello@coolkorki.com"
+        : "Nie udało się zapisać lokalnie. Napisz prosto: hello@coolkorki.com";
+      success.classList.add("show");
+    }
+    if (!stored && formError) {
+      formError.textContent = "Storage zablokowany. Użyj maila hello@coolkorki.com";
+      formError.hidden = false;
+    }
     SoundLab.chapterStinger(6);
     renderTip("hello");
     showTip();
     if (tipEl) {
-      tipEl.innerHTML =
-        "<strong>Sygnał w labie ✓</strong>Zapisane lokalnie. Podłączymy real inbox kiedy chcesz.";
+      tipEl.innerHTML = stored
+        ? "<strong>Sygnał w labie ✓</strong>Zapisane lokalnie. Albo od razu: hello@coolkorki.com"
+        : "<strong>Prawie.</strong>Storage padł — napisz na hello@coolkorki.com";
     }
   });
 

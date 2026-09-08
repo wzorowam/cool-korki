@@ -7,7 +7,7 @@
   --bg-card-solid: #1c1838;
   --text: #f2f0ff;
   --text-muted: #a8a0c8;
-  --text-dim: #6e668f;
+  --text-dim: #9a92bc;
   --teal: #2dd4bf;
   --indigo: #4f46e5;
   --indigo-deep: #312e81;
@@ -45,6 +45,45 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--nav-h) + 1rem);
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 0.75rem;
+  z-index: 400;
+  padding: 0.7rem 1.1rem;
+  border-radius: var(--radius-sm);
+  background: var(--teal);
+  color: #0c0a1a;
+  font-weight: 700;
+  transform: translateY(-160%);
+  transition: transform 0.2s var(--ease);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+
+.btn:focus-visible,
+.rail-stop:focus-visible,
+.sound-toggle:focus-visible,
+.menu-btn:focus-visible,
+.korki-btn:focus-visible,
+.portal-play:focus-visible,
+.nav-links a:focus-visible,
+.logo:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
 }
 
 body {
@@ -742,8 +781,10 @@ h3 {
 .menu-btn {
   display: grid;
   place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-width: 44px;
+  min-height: 44px;
   border: 1px solid var(--border);
   border-radius: 0.65rem;
   background: transparent;
@@ -1748,6 +1789,48 @@ h3 {
 .form-note {
   font-size: 0.82rem;
   color: var(--text-dim);
+}
+
+.form-error {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 107, 44, 0.12);
+  border: 1px solid rgba(255, 107, 44, 0.4);
+  color: #ffc4a8;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.form-error[hidden],
+.field-error[hidden],
+.portal-error[hidden] {
+  display: none;
+}
+
+.field-error {
+  font-size: 0.78rem;
+  color: #ffb089;
+}
+
+.field input[aria-invalid="true"],
+.field textarea[aria-invalid="true"],
+.field select[aria-invalid="true"] {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(255, 107, 44, 0.18);
+}
+
+.portal-error {
+  position: absolute;
+  inset: auto 8% 18%;
+  z-index: 4;
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: var(--radius-full);
+  background: rgba(12, 10, 26, 0.82);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-align: center;
 }
 
 .form-success {
