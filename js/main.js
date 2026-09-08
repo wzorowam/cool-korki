@@ -718,8 +718,10 @@ import { initLab3D } from "./lab3d.js";
       const sticky = scene.querySelector(".scene-stage");
       if (sticky) sticky.style.setProperty("--scene-p", p.toFixed(4));
 
+      const compact = window.matchMedia("(max-width: 640px)").matches;
+
       // Why stack — use mid band of pin scroll (hold → flip → exit)
-      if (scene.id === "why" && whyPanels.length) {
+      if (scene.id === "why" && whyPanels.length && !compact) {
         // map 0.08–0.72 of pin into panel steps
         const whyT = clamp((p - 0.08) / 0.64, 0, 0.999);
         targetWhyStep = whyT * whyPanels.length;
@@ -740,7 +742,8 @@ import { initLab3D } from "./lab3d.js";
       }
 
       // Quest tunnel — pan across most of the pin, ease ends
-      if (scene.id === "adventures" && questTrack) {
+      // On phones: native horizontal swipe (CSS), no transform fight.
+      if (scene.id === "adventures" && questTrack && !compact) {
         const maxShift = Math.max(
           questTrack.scrollWidth - window.innerWidth + 80,
           0

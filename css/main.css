@@ -520,7 +520,8 @@ body[data-webgl="on"] .world::after {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-dim);
-  padding: 0.2rem 0;
+  padding: 0.45rem 0.15rem;
+  min-height: 44px;
   transition: color 0.2s;
   white-space: nowrap;
 }
@@ -608,6 +609,7 @@ body[data-webgl="on"] .world::after {
   align-items: center;
   gap: 0.45rem;
   padding: 0.45rem 0.85rem;
+  min-height: 44px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border);
   background: rgba(20, 18, 42, 0.82);
@@ -771,6 +773,9 @@ h3 {
 }
 
 .nav-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 0.45rem 0.85rem;
   border-radius: var(--radius-full);
   font-size: 0.9rem;
@@ -858,6 +863,7 @@ h3 {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.85rem 1.4rem;
+  min-height: 44px;
   border-radius: var(--radius-full);
   font-weight: 600;
   font-size: 0.95rem;
@@ -1247,6 +1253,7 @@ h3 {
   align-items: center;
   gap: 0.45rem;
   padding: 0.55rem 1.1rem;
+  min-height: 44px;
   border-radius: var(--radius-full);
   border: 1px solid rgba(45, 212, 191, 0.4);
   background: rgba(12, 10, 26, 0.85);
@@ -2171,16 +2178,16 @@ h3 {
 @media (max-width: 899px) {
   .chapter-hud {
     top: auto;
-    bottom: 5.5rem;
-    right: 1rem;
+    bottom: calc(6.4rem + env(safe-area-inset-bottom, 0px));
+    right: calc(1rem + env(safe-area-inset-right, 0px));
   }
 
   .exp-controls {
     top: auto;
-    bottom: 5.5rem;
-    right: 1rem;
+    bottom: calc(9.7rem + env(safe-area-inset-bottom, 0px));
+    right: calc(1rem + env(safe-area-inset-right, 0px));
     margin-top: 0;
-    margin-bottom: 3.5rem;
+    margin-bottom: 0;
   }
 
   .sound-label {
@@ -2193,6 +2200,168 @@ h3 {
 
   .video-portal {
     width: min(100%, 17rem);
+  }
+
+  .korki-nav {
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    right: calc(1rem + env(safe-area-inset-right, 0px));
+  }
+}
+
+/* Narrow phones: 375 / 390 — no sticky clip, no overlapping orbit labels */
+@media (max-width: 640px) {
+  .nav {
+    padding-top: env(safe-area-inset-top, 0px);
+    height: calc(var(--nav-h) + env(safe-area-inset-top, 0px));
+  }
+
+  .xp-bar {
+    top: env(safe-area-inset-top, 0px);
+  }
+
+  .mobile-menu {
+    inset: calc(var(--nav-h) + env(safe-area-inset-top, 0px)) 0 0 0;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-menu a {
+    min-height: 48px;
+  }
+
+  .pin-scene,
+  .pin-scene.pin-long,
+  #start.pin-scene {
+    height: auto;
+  }
+
+  .pin-sticky {
+    position: relative;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    padding: 4.25rem 0 2.25rem;
+  }
+
+  .scene-stage {
+    height: auto;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .hero-immersive {
+    gap: 1.15rem;
+    padding-top: 0.35rem;
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(1.75rem, 8.2vw, 2.25rem);
+  }
+
+  .hero-sub {
+    font-size: 1rem;
+    margin-bottom: 1.15rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 1.15rem;
+  }
+
+  .hero-note {
+    display: none;
+  }
+
+  .video-portal {
+    width: min(72vw, 15.5rem);
+  }
+
+  .scroll-cue {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    margin: 1.25rem auto 0;
+  }
+
+  .why-panel {
+    position: relative;
+    opacity: 1 !important;
+    transform: none !important;
+    margin-bottom: 0.85rem;
+    pointer-events: auto;
+  }
+
+  .why-stack {
+    min-height: 0;
+  }
+
+  .why-big {
+    font-size: 2.4rem;
+    top: 0.45rem;
+    right: 0.8rem;
+  }
+
+  .quest-tunnel {
+    overflow: hidden;
+    margin-inline: -0.25rem;
+  }
+
+  .quest-track {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    transform: none !important;
+    padding: 0.5rem 1rem 1.25rem;
+    scroll-snap-type: x mandatory;
+  }
+
+  .quest-card {
+    flex: 0 0 min(78vw, 260px);
+    scroll-snap-align: start;
+  }
+
+  .orbit-item {
+    position: static;
+    transform: none;
+    margin: 0.3rem;
+  }
+
+  .tools-orbit {
+    height: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem;
+    margin: 1.5rem auto;
+  }
+
+  .orbit-core {
+    flex: 0 0 auto;
+    margin: 0 auto 0.65rem;
+  }
+
+  .contact-links a,
+  .footer-links a {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 390px) {
+  .wrap {
+    width: min(100% - 1.5rem, var(--max));
+  }
+
+  .hero-badge {
+    font-size: 0.75rem;
+  }
+
+  .story-card,
+  .depth-card,
+  .offer,
+  .contact-box {
+    padding: 1.15rem;
   }
 }
 
