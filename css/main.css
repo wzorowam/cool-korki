@@ -93,8 +93,17 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
+  touch-action: pan-y;
   -webkit-font-smoothing: antialiased;
   perspective: 1200px;
+}
+
+.lab3d-canvas,
+.world,
+.world-fallback,
+#starfield {
+  touch-action: none;
+  pointer-events: none;
 }
 
 /* Mood tint via data-scene on body */

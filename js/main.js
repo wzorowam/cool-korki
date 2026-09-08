@@ -11,12 +11,21 @@ import { initLab3D } from "./lab3d.js";
   };
   const easeOutCubic = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 
-  const reduced =
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const motionMq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let reduced = motionMq.matches;
+  let pageVisible = !document.hidden;
 
   /* ---------- WebGL lab room ---------- */
   let lab3d = null;
   let webglOn = false;
+
+  const tearDownLab3D = () => {
+    lab3d?.dispose?.();
+    lab3d = null;
+    webglOn = false;
+    document.body.dataset.webgl = "off";
+    document.body.classList.remove("has-webgl");
+  };
 
   const bootLab3D = async () => {
     const canvas = $("#lab3d");
@@ -38,6 +47,7 @@ import { initLab3D } from "./lab3d.js";
           document.documentElement.scrollHeight - window.innerHeight;
         const p = docH > 0 ? clamp(window.scrollY / docH, 0, 1) : 0;
         lab3d.setProgress(p);
+        lab3d.setPaused?.(document.hidden);
       } else {
         document.body.dataset.webgl = "off";
       }
@@ -45,6 +55,22 @@ import { initLab3D } from "./lab3d.js";
       console.warn("WebGL lab failed, using CSS world:", err);
       document.body.dataset.webgl = "off";
       lab3d = null;
+    }
+  };
+
+  const scheduleBootLab3D = () => {
+    const run = () => {
+      bootLab3D().then(() => {
+        if (webglOn) {
+          stars = [];
+          ctx2d = null;
+        }
+      });
+    };
+    if ("requestIdleCallback" in window) {
+      requestIdleCallback(run, { timeout: 1400 });
+    } else {
+      window.setTimeout(run, 60);
     }
   };
 
@@ -790,6 +816,9 @@ import { initLab3D } from "./lab3d.js";
   };
 
   const tick = () => {
+    if (!pageVisible) {
+      return;
+    }
     mx = lerp(mx, targetMX, reduced ? 1 : 0.07);
     my = lerp(my, targetMY, reduced ? 1 : 0.07);
     document.documentElement.style.setProperty("--mx", mx.toFixed(4));
@@ -806,9 +835,35 @@ import { initLab3D } from "./lab3d.js";
 
     sampleTargets();
     // Starfield only as fallback when WebGL is off
-    if (!webglOn) drawStars();
+    if (!webglOn && !reduced) drawStars();
     requestAnimationFrame(tick);
   };
+
+  document.addEventListener("visibilitychange", () => {
+    pageVisible = !document.hidden;
+    lab3d?.setPaused?.(document.hidden);
+    if (pageVisible) {
+      lastFrame = performance.now();
+      requestAnimationFrame(tick);
+    }
+  });
+
+  const applyMotionPreference = (nextReduced) => {
+    if (nextReduced === reduced) return;
+    reduced = nextReduced;
+    if (reduced) {
+      tearDownLab3D();
+      stars = [];
+      ctx2d = null;
+      if (questTrack) questTrack.style.transform = "none";
+    } else {
+      initStars();
+      scheduleBootLab3D();
+    }
+  };
+  const onMotionChange = (e) => applyMotionPreference(e.matches);
+  if (motionMq.addEventListener) motionMq.addEventListener("change", onMotionChange);
+  else motionMq.addListener?.(onMotionChange);
 
   /* ---------- Reveal (flow) ---------- */
   const reveals = $$(".reveal");
@@ -956,29 +1011,23 @@ import { initLab3D } from "./lab3d.js";
   }
   requestAnimationFrame(tick);
 
-  bootLab3D().then(() => {
-    // Keep starfield as underlay only when WebGL is off
+  // Defer Three.js until idle so first paint / CSS world isn't blocked.
+  // Hash links use JS smoothScrollTo — no wheel preventDefault / scroll hijack.
+  scheduleBootLab3D();
+  window.setTimeout(() => {
     if (webglOn) {
-      // free 2d canvas work — WebGL owns the background loop
-      stars = [];
-      ctx2d = null;
-    }
-
-    window.setTimeout(() => {
-      if (webglOn) {
-        if (tipEl) {
-          tipEl.innerHTML =
-            "<strong>WebGL Lab 🚀</strong>Scroll = walk the 3D room. Background keeps animating.";
-        }
-      } else {
-        renderTip("start");
+      if (tipEl) {
+        tipEl.innerHTML =
+          "<strong>WebGL Lab 🚀</strong>Scroll = walk the 3D room. Background keeps animating.";
       }
-      showTip();
-      window.setTimeout(() => {
-        if (currentScene === "start" || currentScene === "") hideTip();
-      }, 5500);
-    }, 600);
-  });
+    } else {
+      renderTip("start");
+    }
+    showTip();
+    window.setTimeout(() => {
+      if (currentScene === "start" || currentScene === "") hideTip();
+    }, 5500);
+  }, 900);
 
   // gentle portal pulse invite
   window.setTimeout(() => {
