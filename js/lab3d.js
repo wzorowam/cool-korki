@@ -725,9 +725,12 @@ export async function initLab3D(opts) {
   }
 
   const sizeCanvas = () => {
-    const w = Math.max(1, window.innerWidth || canvas.clientWidth || 1);
-    const h = Math.max(1, window.innerHeight || canvas.clientHeight || 1);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, reduced ? 1.25 : 2));
+    const vv = window.visualViewport;
+    const w = Math.max(1, Math.round(vv?.width || window.innerWidth || canvas.clientWidth || 1));
+    const h = Math.max(1, Math.round(vv?.height || window.innerHeight || canvas.clientHeight || 1));
+    const small = w < 720 || h < 700;
+    const cap = reduced ? 1.15 : small ? 1.25 : 1.75;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
     renderer.setSize(w, h, false);
     return { w, h };
   };
@@ -1070,7 +1073,8 @@ export async function initLab3D(opts) {
   korkiGroup.add(korkiGlow);
 
   // Floating dust particles (visible ambient drift)
-  const pCount = reduced ? 600 : 2000;
+  const smallScreen = startW < 720 || startH < 700;
+  const pCount = reduced ? 280 : smallScreen ? 700 : 1600;
   const pGeo = new THREE.BufferGeometry();
   const pPos = new Float32Array(pCount * 3);
   const pSpd = new Float32Array(pCount);
@@ -1129,21 +1133,41 @@ export async function initLab3D(opts) {
     // reserved for zone-specific FX hooks
   }
 
+  function setPaused(p) {
+    paused = !!p;
+    if (!paused && running) {
+      lastT = performance.now();
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    }
+  }
+
   function onResize() {
     const { w, h } = sizeCanvas();
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
-  window.addEventListener("resize", onResize);
+  window.addEventListener("resize", onResize, { passive: true });
+  window.visualViewport?.addEventListener("resize", onResize, { passive: true });
 
   const onVisibility = () => {
-    paused = document.hidden;
-    if (!paused && running) {
-      lastT = performance.now();
-      if (!rafId) rafId = requestAnimationFrame(tick);
-    }
+    setPaused(document.hidden);
   };
   document.addEventListener("visibilitychange", onVisibility);
+
+  // Cheap offscreen pause: if the canvas leaves the viewport (rare — it is
+  // fixed) or the page is covered, stop the rAF work.
+  let io = null;
+  if ("IntersectionObserver" in window) {
+    io = new IntersectionObserver(
+      (entries) => {
+        const hit = entries[0];
+        if (!hit) return;
+        setPaused(document.hidden || hit.intersectionRatio < 0.05);
+      },
+      { threshold: [0, 0.05, 0.2] }
+    );
+    io.observe(canvas);
+  }
 
   function tick(now) {
     if (!running) {
@@ -1281,12 +1305,15 @@ export async function initLab3D(opts) {
     setPointer,
     setPortalOpen,
     setScene,
+    setPaused,
     dispose() {
       running = false;
       if (rafId) cancelAnimationFrame(rafId);
       rafId = 0;
       window.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", onVisibility);
+      io?.disconnect();
       renderer.dispose();
       scene.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose();

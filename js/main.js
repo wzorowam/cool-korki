@@ -11,12 +11,21 @@ import { initLab3D } from "./lab3d.js";
   };
   const easeOutCubic = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 
-  const reduced =
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const motionMq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let reduced = motionMq.matches;
+  let pageVisible = !document.hidden;
 
   /* ---------- WebGL lab room ---------- */
   let lab3d = null;
   let webglOn = false;
+
+  const tearDownLab3D = () => {
+    lab3d?.dispose?.();
+    lab3d = null;
+    webglOn = false;
+    document.body.dataset.webgl = "off";
+    document.body.classList.remove("has-webgl");
+  };
 
   const bootLab3D = async () => {
     const canvas = $("#lab3d");
@@ -38,6 +47,7 @@ import { initLab3D } from "./lab3d.js";
           document.documentElement.scrollHeight - window.innerHeight;
         const p = docH > 0 ? clamp(window.scrollY / docH, 0, 1) : 0;
         lab3d.setProgress(p);
+        lab3d.setPaused?.(document.hidden);
       } else {
         document.body.dataset.webgl = "off";
       }
@@ -45,6 +55,22 @@ import { initLab3D } from "./lab3d.js";
       console.warn("WebGL lab failed, using CSS world:", err);
       document.body.dataset.webgl = "off";
       lab3d = null;
+    }
+  };
+
+  const scheduleBootLab3D = () => {
+    const run = () => {
+      bootLab3D().then(() => {
+        if (webglOn) {
+          stars = [];
+          ctx2d = null;
+        }
+      });
+    };
+    if ("requestIdleCallback" in window) {
+      requestIdleCallback(run, { timeout: 1400 });
+    } else {
+      window.setTimeout(run, 60);
     }
   };
 
@@ -252,7 +278,8 @@ import { initLab3D } from "./lab3d.js";
     const icon = soundToggle.querySelector(".sound-icon");
     const label = soundToggle.querySelector(".sound-label");
     if (icon) icon.textContent = on ? "🔊" : "🔇";
-    if (label) label.textContent = on ? "Sound on" : "Sound off";
+    if (label) label.textContent = on ? "Dźwięk on" : "Dźwięk off";
+    soundToggle.setAttribute("aria-label", on ? "Dźwięk włączony" : "Dźwięk wyłączony");
   };
 
   soundToggle?.addEventListener("click", async () => {
@@ -276,12 +303,16 @@ import { initLab3D } from "./lab3d.js";
     mobileMenu.classList.remove("open");
     mobileMenu.hidden = true;
     menuBtn.setAttribute("aria-expanded", "false");
+    menuBtn.setAttribute("aria-label", "Otwórz menu");
   };
   const openMenu = () => {
     if (!mobileMenu || !menuBtn) return;
     mobileMenu.hidden = false;
     mobileMenu.classList.add("open");
     menuBtn.setAttribute("aria-expanded", "true");
+    menuBtn.setAttribute("aria-label", "Zamknij menu");
+    const first = mobileMenu.querySelector("a");
+    first?.focus();
   };
 
   menuBtn?.addEventListener("click", () => {
@@ -290,6 +321,26 @@ import { initLab3D } from "./lab3d.js";
     else openMenu();
   });
   mobileMenu?.querySelectorAll("a").forEach((a) => a.addEventListener("click", closeMenu));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (menuBtn?.getAttribute("aria-expanded") === "true") {
+        closeMenu();
+        menuBtn.focus();
+      }
+      return;
+    }
+    if (e.key !== "Tab") return;
+    if (menuBtn?.getAttribute("aria-expanded") !== "true") return;
+    const items = [menuBtn, ...mobileMenu.querySelectorAll("a")];
+    const i = items.indexOf(document.activeElement);
+    if (e.shiftKey && (i <= 0)) {
+      e.preventDefault();
+      items[items.length - 1]?.focus();
+    } else if (!e.shiftKey && i === items.length - 1) {
+      e.preventDefault();
+      items[0]?.focus();
+    }
+  });
 
   /* ---------- Starfield ---------- */
   const canvas = $("#starfield");
@@ -383,8 +434,8 @@ import { initLab3D } from "./lab3d.js";
 
   const tips = {
     start: {
-      title: "Gateway 🚀",
-      body: "Otwórz Hello portal albo scroll wolno — każdy rozdział ma swój sound color.",
+      title: "Night lab 🚀",
+      body: "Jeden next step: zostaw sygnał. Albo scroll — rozdziały same się otwierają.",
     },
     story: {
       title: "Setup",
@@ -404,11 +455,11 @@ import { initLab3D } from "./lab3d.js";
     },
     paths: {
       title: "Paths",
-      body: "Soft offer zone. Zero pressure — wybierz albo napisz „nie wiem”.",
+      body: "Orientacja, nie ulotka. Jak nie wiesz — napisz „nie wiem”.",
     },
     hello: {
       title: "Hello",
-      body: "Ostatni checkpoint. Zostaw sygnał. Catch you soon 🪩",
+      body: "Jedyny next step. Imię + mail. Catch you soon 🪩",
     },
   };
 
@@ -514,10 +565,40 @@ import { initLab3D } from "./lab3d.js";
   const portalVideo = $("#portal-video");
   const portalPlay = $("#portal-play");
   const portalPoster = $("#portal-poster");
+  const portalError = $("#portal-error");
   let portalOpenState = false;
+  let portalHasVideo = true;
+
+  const markPortalOffline = () => {
+    portalHasVideo = false;
+    portal?.classList.add("is-offline");
+    if (portalError) portalError.hidden = false;
+    portalPoster?.classList.remove("is-hidden");
+    if (portalPlay) {
+      const t = portalPlay.querySelector(".portal-play-text");
+      if (t) t.textContent = "Hello · scroll";
+      portalPlay.setAttribute("aria-label", "Przejdź do hello");
+    }
+  };
+
+  portalVideo?.addEventListener("error", markPortalOffline);
+  if (portalVideo) {
+    portalVideo.addEventListener("loadeddata", () => {
+      portalHasVideo = true;
+      if (portalError) portalError.hidden = true;
+    });
+  }
 
   const openPortal = async () => {
     if (!portal || portalOpenState) return;
+    if (!portalHasVideo) {
+      const hello = document.getElementById("hello");
+      if (hello) {
+        const top = hello.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top, behavior: reduced ? "auto" : "smooth" });
+      }
+      return;
+    }
     portalOpenState = true;
     portal.classList.add("is-open");
     lab3d?.setPortalOpen?.(true);
@@ -560,6 +641,10 @@ import { initLab3D } from "./lab3d.js";
     e.stopPropagation();
     if (portalOpenState) closePortal();
     else openPortal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && portalOpenState) closePortal();
   });
 
   portal?.addEventListener("click", (e) => {
@@ -645,8 +730,10 @@ import { initLab3D } from "./lab3d.js";
       const sticky = scene.querySelector(".scene-stage");
       if (sticky) sticky.style.setProperty("--scene-p", p.toFixed(4));
 
+      const compact = window.matchMedia("(max-width: 640px)").matches;
+
       // Why stack — use mid band of pin scroll (hold → flip → exit)
-      if (scene.id === "why" && whyPanels.length) {
+      if (scene.id === "why" && whyPanels.length && !compact) {
         // map 0.08–0.72 of pin into panel steps
         const whyT = clamp((p - 0.08) / 0.64, 0, 0.999);
         targetWhyStep = whyT * whyPanels.length;
@@ -667,7 +754,8 @@ import { initLab3D } from "./lab3d.js";
       }
 
       // Quest tunnel — pan across most of the pin, ease ends
-      if (scene.id === "adventures" && questTrack) {
+      // On phones: native horizontal swipe (CSS), no transform fight.
+      if (scene.id === "adventures" && questTrack && !compact) {
         const maxShift = Math.max(
           questTrack.scrollWidth - window.innerWidth + 80,
           0
@@ -743,6 +831,9 @@ import { initLab3D } from "./lab3d.js";
   };
 
   const tick = () => {
+    if (!pageVisible) {
+      return;
+    }
     mx = lerp(mx, targetMX, reduced ? 1 : 0.07);
     my = lerp(my, targetMY, reduced ? 1 : 0.07);
     document.documentElement.style.setProperty("--mx", mx.toFixed(4));
@@ -759,9 +850,35 @@ import { initLab3D } from "./lab3d.js";
 
     sampleTargets();
     // Starfield only as fallback when WebGL is off
-    if (!webglOn) drawStars();
+    if (!webglOn && !reduced) drawStars();
     requestAnimationFrame(tick);
   };
+
+  document.addEventListener("visibilitychange", () => {
+    pageVisible = !document.hidden;
+    lab3d?.setPaused?.(document.hidden);
+    if (pageVisible) {
+      lastFrame = performance.now();
+      requestAnimationFrame(tick);
+    }
+  });
+
+  const applyMotionPreference = (nextReduced) => {
+    if (nextReduced === reduced) return;
+    reduced = nextReduced;
+    if (reduced) {
+      tearDownLab3D();
+      stars = [];
+      ctx2d = null;
+      if (questTrack) questTrack.style.transform = "none";
+    } else {
+      initStars();
+      scheduleBootLab3D();
+    }
+  };
+  const onMotionChange = (e) => applyMotionPreference(e.matches);
+  if (motionMq.addEventListener) motionMq.addEventListener("change", onMotionChange);
+  else motionMq.addListener?.(onMotionChange);
 
   /* ---------- Reveal (flow) ---------- */
   const reveals = $$(".reveal");
@@ -809,29 +926,92 @@ import { initLab3D } from "./lab3d.js";
   /* ---------- Form ---------- */
   const form = $("#contact-form");
   const success = $("#form-success");
+  const formError = $("#form-error");
+  const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
+
+  const setFieldError = (id, message) => {
+    const input = $(`#${id}`);
+    const err = $(`#${id}-error`);
+    if (input) input.setAttribute("aria-invalid", message ? "true" : "false");
+    if (err) {
+      err.textContent = message || "";
+      err.hidden = !message;
+    }
+  };
+
+  const clearFormErrors = () => {
+    setFieldError("name", "");
+    setFieldError("email", "");
+    if (formError) {
+      formError.textContent = "";
+      formError.hidden = true;
+    }
+  };
+
+  form?.addEventListener("input", (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLElement)) return;
+    if (t.id === "name" || t.id === "email") setFieldError(t.id, "");
+    if (formError) formError.hidden = true;
+    success?.classList.remove("show");
+  });
+
   form?.addEventListener("submit", (e) => {
     e.preventDefault();
+    clearFormErrors();
+    success?.classList.remove("show");
     const data = Object.fromEntries(new FormData(form).entries());
-    if (!data.name || !data.email) {
-      form.reportValidity?.();
+    const name = String(data.name || "").trim();
+    const email = String(data.email || "").trim();
+    let bad = false;
+    if (!name) {
+      setFieldError("name", "Wpisz imię — choćby nick.");
+      bad = true;
+    }
+    if (!email) {
+      setFieldError("email", "Potrzebujemy maila, żeby wrócić z sygnałem.");
+      bad = true;
+    } else if (!emailOk(email)) {
+      setFieldError("email", "To nie wygląda jak email.");
+      bad = true;
+    }
+    if (bad) {
+      if (formError) {
+        formError.textContent = "Dwa pola na start: imię i email.";
+        formError.hidden = false;
+      }
+      const firstBad = form.querySelector('[aria-invalid="true"]');
+      firstBad?.focus();
       return;
     }
+    let stored = true;
     try {
       const key = "coolkorki_leads";
       const prev = JSON.parse(localStorage.getItem(key) || "[]");
-      prev.push({ ...data, at: new Date().toISOString() });
+      prev.push({ ...data, name, email, at: new Date().toISOString() });
       localStorage.setItem(key, JSON.stringify(prev));
     } catch {
-      /* ignore */
+      stored = false;
     }
     form.reset();
-    success?.classList.add("show");
+    clearFormErrors();
+    if (success) {
+      success.textContent = stored
+        ? "Sygnał odebrany. Cool Korki kiwa głową. Zapisane na tym urządzeniu — albo napisz: hello@coolkorki.com"
+        : "Nie udało się zapisać lokalnie. Napisz prosto: hello@coolkorki.com";
+      success.classList.add("show");
+    }
+    if (!stored && formError) {
+      formError.textContent = "Storage zablokowany. Użyj maila hello@coolkorki.com";
+      formError.hidden = false;
+    }
     SoundLab.chapterStinger(6);
     renderTip("hello");
     showTip();
     if (tipEl) {
-      tipEl.innerHTML =
-        "<strong>Sygnał w labie ✓</strong>Zapisane lokalnie. Podłączymy real inbox kiedy chcesz.";
+      tipEl.innerHTML = stored
+        ? "<strong>Sygnał w labie ✓</strong>Zapisane lokalnie. Albo od razu: hello@coolkorki.com"
+        : "<strong>Prawie.</strong>Storage padł — napisz na hello@coolkorki.com";
     }
   });
 
@@ -846,29 +1026,23 @@ import { initLab3D } from "./lab3d.js";
   }
   requestAnimationFrame(tick);
 
-  bootLab3D().then(() => {
-    // Keep starfield as underlay only when WebGL is off
+  // Defer Three.js until idle so first paint / CSS world isn't blocked.
+  // Hash links use JS smoothScrollTo — no wheel preventDefault / scroll hijack.
+  scheduleBootLab3D();
+  window.setTimeout(() => {
     if (webglOn) {
-      // free 2d canvas work — WebGL owns the background loop
-      stars = [];
-      ctx2d = null;
-    }
-
-    window.setTimeout(() => {
-      if (webglOn) {
-        if (tipEl) {
-          tipEl.innerHTML =
-            "<strong>WebGL Lab 🚀</strong>Scroll = walk the 3D room. Background keeps animating.";
-        }
-      } else {
-        renderTip("start");
+      if (tipEl) {
+        tipEl.innerHTML =
+          "<strong>WebGL Lab 🚀</strong>Scroll = walk the 3D room. Background keeps animating.";
       }
-      showTip();
-      window.setTimeout(() => {
-        if (currentScene === "start" || currentScene === "") hideTip();
-      }, 5500);
-    }, 600);
-  });
+    } else {
+      renderTip("start");
+    }
+    showTip();
+    window.setTimeout(() => {
+      if (currentScene === "start" || currentScene === "") hideTip();
+    }, 5500);
+  }, 900);
 
   // gentle portal pulse invite
   window.setTimeout(() => {

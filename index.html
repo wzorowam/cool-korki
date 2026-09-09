@@ -2,15 +2,30 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Cool Korki — Discovery Adventure</title>
-  <meta name="description" content="Cool Korki: immersive English learning adventure with AI, neuroscience, and zero salesy vibes." />
+  <meta name="description" content="Cool Korki — przygoda z angielskim dla dorosłych w Polsce. Night lab, AI buddy, zero salesy. Nie bot od zadań." />
   <meta name="theme-color" content="#0c0a1a" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="canonical" href="https://cool-korki.vercel.app/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="pl_PL" />
+  <meta property="og:site_name" content="Cool Korki" />
+  <meta property="og:title" content="Cool Korki — Discovery Adventure" />
+  <meta property="og:description" content="Przygoda z angielskim dla dorosłych w Polsce. Night lab, nie kurs z ulotki." />
+  <meta property="og:url" content="https://cool-korki.vercel.app/" />
+  <meta property="og:image" content="https://cool-korki.vercel.app/assets/korki-character.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Cool Korki — Discovery Adventure" />
+  <meta name="twitter:description" content="Przygoda z angielskim dla dorosłych w Polsce. Night lab, nie kurs z ulotki." />
+  <meta name="twitter:image" content="https://cool-korki.vercel.app/assets/korki-character.jpg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="preload" as="image" href="assets/korki-character.jpg" />
   <link rel="stylesheet" href="css/main.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='10' fill='%234f46e5'/><text x='16' y='21' text-anchor='middle' font-size='11' font-family='system-ui' font-weight='800' fill='white'>CK</text></svg>" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/korki-character.jpg" />
   <script type="importmap">
   {
     "imports": {
@@ -20,6 +35,7 @@
   </script>
 </head>
 <body data-scene="start" data-progress="0" data-webgl="pending">
+  <a class="skip-link" href="#main">Przejdź do treści</a>
   <!-- 3D WORLD LAYER (fixed behind content) -->
   <div class="world" id="world" aria-hidden="true">
     <!-- Real WebGL lab room -->
@@ -89,8 +105,8 @@
         <li><a href="#lab">Lab</a></li>
         <li><a href="#paths">Ścieżki</a></li>
       </ul>
-      <a href="#hello" class="btn btn-primary nav-cta">Hej, pogadajmy</a>
-      <button class="menu-btn" id="menu-btn" type="button" aria-label="Otwórz menu" aria-expanded="false">
+      <a href="#hello" class="btn btn-primary nav-cta">Zostaw sygnał</a>
+      <button class="menu-btn" id="menu-btn" type="button" aria-label="Otwórz menu" aria-expanded="false" aria-controls="mobile-menu">
         <span></span>
       </button>
     </div>
@@ -102,25 +118,18 @@
     <a href="#adventures">Quests</a>
     <a href="#lab">Lab</a>
     <a href="#paths">Ścieżki</a>
-    <a href="#hello" class="btn btn-primary">Hej, pogadajmy</a>
+    <a href="#hello" class="btn btn-primary">Zostaw sygnał</a>
   </div>
 
   <!-- CHAPTER HUD + SOUND -->
   <div class="chapter-hud" id="chapter-hud" aria-live="polite">
     <span class="chapter-num" id="chapter-num">00</span>
-    <span class="chapter-name" id="chapter-name">Gateway</span>
+    <span class="chapter-name" id="chapter-name">Night lab</span>
   </div>
 
-  <div class="exp-controls">
-    <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" title="Sound on/off">
-      <span class="sound-icon" aria-hidden="true">🔇</span>
-      <span class="sound-label">Sound off</span>
-    </button>
-  </div>
-
-  <main id="top">
+  <main id="main" tabindex="-1">
     <!-- SCENE 0 · GATEWAY (pinned cinematic) -->
-    <section class="pin-scene" id="start" data-scene="start" data-chapter="00" data-title="Gateway" data-mood="dawn">
+    <section class="pin-scene" id="start" data-scene="start" data-chapter="00" data-title="Night lab" data-mood="dawn">
       <div class="pin-sticky">
         <div class="scene-stage" data-tilt>
           <div class="hero-bg-layer" data-parallax="0.15">
@@ -130,23 +139,28 @@
             <div class="hero-copy" data-enter="left">
               <div class="hero-badge">
                 <span class="dot"></span>
-                Chapter 00 · Welcome to the lab
+                Chapter 00 · Night lab
               </div>
               <h1>Nie studiujemy angielskiego.<br /><em>Gramy nim.</em></h1>
               <p class="hero-sub">
-                Jestem <strong>Cool Korki</strong> — Twój AI buddy, coach i certified chaos manager.
-                To nie landing page. To <strong>discovery adventure</strong>.
-                Scroll = teleporter.
+                <strong>Cool Korki</strong> to przygoda z angielskim dla dorosłych w Polsce —
+                night lab, nie kurs z ulotki. AI buddy w labie, nie bot od zadań.
+                Scroll otwiera kolejne rozdziały.
+              </p>
+              <p class="hero-who">
+                <span>Co to:</span> discovery adventure ·
+                <span>Dla kogo:</span> dorośli, nie PA w szkole ·
+                <span>Dalej:</span> jeden sygnał
               </p>
               <div class="hero-actions">
-                <a href="#story" class="btn btn-primary btn-lg">Wejdź do story</a>
-                <a href="#adventures" class="btn btn-secondary btn-lg">Skip to quests</a>
+                <a href="#hello" class="btn btn-primary btn-lg">Zostaw sygnał</a>
+                <a href="#story" class="hero-quiet">albo wejdź w story</a>
               </div>
               <div class="hero-note">
-                <img src="assets/korki-character.jpg" alt="Cool Korki" />
+                <img src="assets/korki-character.jpg" alt="Cool Korki — Corky" />
                 <p>
-                  <strong>C00l K0RKI 🤖</strong>
-                  Scroll wolno. Każdy rozdział odblokowuje nowy depth layer.
+                  <strong>Corky w labie</strong>
+                  To nie student-bot. To przewodnik po przygodzie.
                 </p>
               </div>
             </div>
@@ -166,6 +180,7 @@
                     loop
                     preload="metadata"
                   ></video>
+                  <p class="portal-error" id="portal-error" hidden>Portal video offline — zostaje Korki.</p>
                   <img
                     class="portal-poster"
                     id="portal-poster"
@@ -201,7 +216,8 @@
             <h2 data-enter="up">Szkolny angielski Cię nie zawiódł.<br /><span class="em">Po prostu nie był cool.</span></h2>
             <p class="lead" data-enter="up">
               Coursebook. „My name is…”. Strach przed błędem. Zero real talk.
-              Cool Korki flipuje to: adventure, nie lekcja.
+              Tu jest inaczej: adventure, nie lekcja. Dla ludzi, którzy już coś umieją —
+              i chcą wreszcie gadać.
             </p>
             <div class="story-grid depth-grid">
               <article class="story-card depth-card" data-z="1" data-enter="up">
@@ -247,7 +263,7 @@
               <article class="why-panel" data-step="1">
                 <div class="why-big">02</div>
                 <div class="icon">🚀</div>
-                <h3>Bo mówisz o cool shit</h3>
+                <h3>Bo mówisz o tym, co Cię kręci</h3>
                 <p>Biznes, AI, branding, story, projekty. Nie weather small talk. Tematy na jutro.</p>
               </article>
               <article class="why-panel" data-step="2">
@@ -274,7 +290,7 @@
           <div class="wrap scene-content">
             <p class="section-label" data-enter="up">Rozdział 3 · Adventures</p>
             <h2 data-enter="up">Wybierz quest.<br /><span class="em">Reszta to gameplay.</span></h2>
-            <p class="lead" data-enter="up">Scroll w tej strefie = pan po questach w 3D space.</p>
+            <p class="lead" data-enter="up">Sześć kierunków. Wybierz jeden, reszta to gameplay — nie lista „pakietów”.</p>
           </div>
           <div class="quest-tunnel" id="quest-tunnel">
             <div class="quest-track" id="quest-track">
@@ -354,10 +370,11 @@
     <!-- SCENE 5 · PATHS (normal-ish, still in world) -->
     <section class="flow-scene" id="paths" data-scene="paths" data-chapter="05" data-title="Paths" data-mood="path">
       <div class="wrap scene-content">
-        <p class="section-label reveal">Rozdział 5 · Paths (nie package’e)</p>
-        <h2 class="reveal">Kilka sposobów, żeby <span class="em">zacząć.</span></h2>
+        <p class="section-label reveal">Rozdział 5 · Paths</p>
+        <h2 class="reveal">Kilka sposobów, żeby <span class="em">się zejść.</span></h2>
         <p class="lead offers-intro reveal">
-          Zero hard sell. Spójrz, co pasuje. Resztę dogadamy jak ludzie.
+          Orientacja, nie cennik-ulotka. Jeśli nic nie pasuje — napisz „nie wiem”.
+          Jeden następny krok: sygnał do labu.
         </p>
         <div class="offers-grid">
           <article class="offer featured reveal depth-card" data-z="2">
@@ -374,7 +391,7 @@
               <li>tips z neuronauki</li>
               <li>udostępnij post → rabat 100 zł</li>
             </ul>
-            <a href="#hello" class="btn btn-primary">Chcę to wyzwanie</a>
+            <a href="#hello" class="btn btn-primary">Zostaw sygnał</a>
           </article>
           <article class="offer reveal depth-card" data-z="1">
             <div>
@@ -387,7 +404,7 @@
               <li>2 konsultacje z lektorem</li>
               <li>ćwiczenia utrwalające</li>
             </ul>
-            <a href="#hello" class="btn btn-secondary">Opowiedz mi więcej</a>
+            <a href="#hello" class="hero-quiet offer-quiet">to też przez sygnał</a>
           </article>
           <article class="offer reveal depth-card" data-z="3">
             <div>
@@ -400,17 +417,16 @@
               <li>4 konsultacje z lektorem</li>
               <li>zestawy z Twoich rozmów</li>
             </ul>
-            <a href="#hello" class="btn btn-secondary">Zróbmy to razem</a>
+            <a href="#hello" class="hero-quiet offer-quiet">to też przez sygnał</a>
           </article>
         </div>
         <div class="biz-strip reveal">
-          <h3>Dla firm &amp; busy humans</h3>
+          <h3>Zespół albo napięty kalendarz</h3>
           <p>
             Team English od <strong style="color: var(--text)">2&nbsp;420 zł</strong>.
             Sesje od <strong style="color: var(--text)">250 zł / 20–25 min</strong>.
             Secret Project, AI, branding — w angielskim, nie obok niego.
           </p>
-          <div><a href="#hello" class="btn btn-ghost">Pogadajmy o zespole</a></div>
         </div>
       </div>
     </section>
@@ -419,19 +435,23 @@
     <section class="flow-scene" id="hello" data-scene="hello" data-chapter="06" data-title="Hello" data-mood="hello">
       <div class="wrap scene-content">
         <p class="section-label reveal">Ostatni rozdział · Hello</p>
-        <h2 class="reveal">Hej. <span class="em-orange">Napisz.</span> Zero forms of doom.</h2>
+        <h2 class="reveal">Hej. <span class="em-orange">Jeden sygnał.</span></h2>
         <p class="lead reveal">
-          Zostaw poziom, cel albo „TEST B1”. Wrócimy z czymś konkretnym — albo z żartem.
+          Imię, mail, poziom na oko. Albo samo „TEST B1”. Wrócimy konkretnie — albo z żartem.
+          To jedyny next step na tej stronie.
         </p>
         <div class="contact-box reveal">
-          <form class="contact-form" id="contact-form" novalidate>
+          <form class="contact-form" id="contact-form" action="mailto:hello@coolkorki.com" method="post" enctype="text/plain" novalidate>
+            <p class="form-error" id="form-error" role="alert" hidden></p>
             <div class="field">
               <label for="name">Imię</label>
-              <input id="name" name="name" type="text" autocomplete="name" placeholder="np. Asia" required />
+              <input id="name" name="name" type="text" autocomplete="name" placeholder="np. Asia" required aria-describedby="name-error" />
+              <span class="field-error" id="name-error" hidden></span>
             </div>
             <div class="field">
               <label for="email">Email</label>
-              <input id="email" name="email" type="email" autocomplete="email" placeholder="ty@mail.com" required />
+              <input id="email" name="email" type="email" autocomplete="email" placeholder="ty@mail.com" required aria-describedby="email-error" />
+              <span class="field-error" id="email-error" hidden></span>
             </div>
             <div class="field">
               <label for="level">Twój poziom (na oko)</label>
@@ -449,7 +469,7 @@
               <textarea id="message" name="message" placeholder="np. bariera mówienia / secret project / business English…"></textarea>
             </div>
             <button type="submit" class="btn btn-primary btn-lg">Wyślij sygnał do labu</button>
-            <p class="form-note">MVP form — zapis lokalny. Podłączymy mail / n8n kiedy będziesz gotów.</p>
+            <p class="form-note">Zapis na tym urządzeniu. Albo od razu: hello@coolkorki.com</p>
             <div class="form-success" id="form-success" role="status">
               Sygnał odebrany. Cool Korki kiwa głową. Odezwiemy się.
             </div>
@@ -484,6 +504,13 @@
       </ul>
     </div>
   </footer>
+
+  <div class="exp-controls">
+    <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="false" aria-label="Dźwięk wyłączony">
+      <span class="sound-icon" aria-hidden="true">🔇</span>
+      <span class="sound-label">Dźwięk off</span>
+    </button>
+  </div>
 
   <!-- Guide bubble (character tips) -->
   <div class="korki-nav">
